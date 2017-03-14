@@ -1,5 +1,3 @@
-// +build freebsd
-
 /*
 PF (Packet Filter)
 
