@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -14,11 +12,11 @@ import "C"
 type AddressFamily uint8
 
 const (
-	// Any matches any address family
+	// AddressFamilyAny Any matches any address family
 	AddressFamilyAny AddressFamily = 0
-	// IPv4
+	// AddressFamilyInet IPv4
 	AddressFamilyInet AddressFamily = C.AF_INET
-	// IPv6
+	// AddressFamilyInet6 IPv6
 	AddressFamilyInet6 AddressFamily = C.AF_INET6
 )
 

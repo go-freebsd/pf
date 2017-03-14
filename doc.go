@@ -1,5 +1,5 @@
 /*
-PF (Packet Filter)
+Package pf (Packet Filter)
 
 The FreeBSD operating system has multiple packet filter build-in. One of
 the packet filters was ported from OpenBSD and is called pf (packetfilter).

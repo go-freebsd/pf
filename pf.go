@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -54,7 +52,7 @@ func (file Handle) Rules() ([]Rule, error) {
 	for i := 0; i < int(rules.nr); i++ {
 		err = file.Rule(int(rules.ticket), i, &ruleList[i])
 		if err != nil {
-			return nil, fmt.Errorf("DIOCGETRULE: %s\n", err)
+			return nil, fmt.Errorf("DIOCGETRULE: %s", err)
 		}
 	}
 
@@ -72,7 +70,7 @@ func (file Handle) SetStatusInterface(dev string) error {
 	}
 	err = file.ioctl(C.DIOCSETSTATUSIF, unsafe.Pointer(&pi))
 	if err != nil {
-		return fmt.Errorf("DIOCSETSTATUSIF: %s\n", err)
+		return fmt.Errorf("DIOCSETSTATUSIF: %s", err)
 	}
 	return nil
 }
@@ -83,7 +81,7 @@ func (file Handle) StatusInterface() (string, error) {
 	var pi C.struct_pfioc_if
 	err := file.ioctl(C.DIOCSETSTATUSIF, unsafe.Pointer(&pi))
 	if err != nil {
-		return "", fmt.Errorf("DIOCSETSTATUSIF: %s\n", err)
+		return "", fmt.Errorf("DIOCSETSTATUSIF: %s", err)
 	}
 	return C.GoString(&(pi.ifname[0])), nil
 }

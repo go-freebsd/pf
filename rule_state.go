@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -16,9 +14,14 @@ import "C"
 type State uint8
 
 const (
-	StateNo       State = 0
-	StateKeep     State = C.PF_STATE_NORMAL
+	// StateNo no state tracking with this rule
+	StateNo State = 0
+	// StateKeep track state inside the packet filter
+	StateKeep State = C.PF_STATE_NORMAL
+	// StateModulate keeps state and adds high quality random sequence numbers
+	// for tcp
 	StateModulate State = C.PF_STATE_MODULATE
+	// StateSynproxy keeps state and creates new tcp connections to hide internals
 	StateSynproxy State = C.PF_STATE_SYNPROXY
 )
 

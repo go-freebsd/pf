@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -25,7 +23,7 @@ type RuleSetType int
 const (
 	// RuleSetScrub Scrub (packet normalization) rules.
 	RuleSetScrub RuleSetType = C.PF_RULESET_SCRUB
-	// RuleSetFiler Filter rules.
+	// RuleSetFilter Filter rules.
 	RuleSetFilter RuleSetType = C.PF_RULESET_FILTER
 	// RuleSetNAT NAT (Network Address Translation) rules.
 	RuleSetNAT RuleSetType = C.PF_RULESET_NAT
@@ -54,7 +52,7 @@ func (rs *RuleSet) SetAnchor(path string) error {
 	return cStringCopy(unsafe.Pointer(&rs.wrap.anchor), path, int(C.MAXPATHLEN))
 }
 
-// Achor returns the anchor of the rule set
+// Anchor returns the anchor of the rule set
 func (rs RuleSet) Anchor() string {
 	return C.GoString(&rs.wrap.anchor[0])
 }

@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -73,7 +71,7 @@ func (tx Transaction) Begin() error {
 	return nil
 }
 
-// Commmit closes the transaction and applies the changes
+// Commit closes the transaction and applies the changes
 // that where done since the last Begin() transaction
 func (tx Transaction) Commit() error {
 	defer C.free_pfioc_trans(&tx.wrap)

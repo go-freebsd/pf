@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -14,13 +12,13 @@ import "C"
 type Direction uint8
 
 const (
-	// In incoming (ingress) traffic
+	// DirectionIn In incoming (ingress) traffic
 	DirectionIn Direction = C.PF_IN
-	// Out outgoing (egress) traffic
+	// DirectionOut Out outgoing (egress) traffic
 	DirectionOut Direction = C.PF_OUT
-	// InOut any direction (ingress/egress) traffic
+	// DirectionInOut InOut any direction (ingress/egress) traffic
 	DirectionInOut Direction = C.PF_INOUT
-	// Forward
+	// DirectionFwd Forward
 	DirectionFwd Direction = C.PF_FWD
 )
 

@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -14,13 +12,13 @@ import "C"
 type Protocol uint8
 
 const (
-	// Any matches any protocol
+	// ProtocolAny Any matches any protocol
 	ProtocolAny Protocol = 0
-	// TCP
+	// ProtocolTCP TCP
 	ProtocolTCP Protocol = C.IPPROTO_TCP
-	// UDP
+	// ProtocolUDP UDP
 	ProtocolUDP Protocol = C.IPPROTO_UDP
-	// ICMP
+	// ProtocolICMP ICMP
 	ProtocolICMP Protocol = C.IPPROTO_ICMP
 )
 

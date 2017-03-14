@@ -1,5 +1,3 @@
-// +build freebsd
-
 package pf
 
 import (
@@ -14,18 +12,36 @@ import "C"
 type Action uint8
 
 const (
-	ActionPass         Action = C.PF_PASS
-	ActionDrop         Action = C.PF_DROP
-	ActionScrub        Action = C.PF_SCRUB
-	ActionNoScrub      Action = C.PF_NOSCRUB
-	ActionNAT          Action = C.PF_NAT
-	ActionNoNAT        Action = C.PF_NONAT
-	ActionBINAT        Action = C.PF_BINAT
-	ActionNoBINAT      Action = C.PF_NOBINAT
-	ActionRDR          Action = C.PF_RDR
-	ActionNoRDR        Action = C.PF_NORDR
+	// ActionPass Filter rule action to pass the traffic
+	ActionPass Action = C.PF_PASS
+	// ActionDrop Filter rule action to drop the traffic
+	ActionDrop Action = C.PF_DROP
+
+	// ActionScrub Scrub rule action to do scrubbing
+	ActionScrub Action = C.PF_SCRUB
+	// ActionNoScrub Srub rule action to not do scrubbing
+	ActionNoScrub Action = C.PF_NOSCRUB
+
+	// ActionNAT NAT rule action to to NAT
+	ActionNAT Action = C.PF_NAT
+	// ActionNoNAT NAT rule action to not do NAT
+	ActionNoNAT Action = C.PF_NONAT
+
+	// ActionBINAT NAT rule action to to BINAT
+	ActionBINAT Action = C.PF_BINAT
+	// ActionNoBINAT NAT rule action to not do BINAT
+	ActionNoBINAT Action = C.PF_NOBINAT
+
+	// ActionRDR RDR rule action to to RDR
+	ActionRDR Action = C.PF_RDR
+	// ActionNoRDR RDR rule action to not do RDR
+	ActionNoRDR Action = C.PF_NORDR
+
+	// ActionSynProxyDrop TODO
 	ActionSynProxyDrop Action = C.PF_SYNPROXY_DROP
-	ActionDefer        Action = C.PF_DEFER
+
+	// ActionDefer TODO is this divert?
+	ActionDefer Action = C.PF_DEFER
 )
 
 func (a Action) String() string {
