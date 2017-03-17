@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+func TestStartStop(t *testing.T) {
+	err := pfh.Start()
+	assert.NoError(t, err)
+
+	err = pfh.Stop()
+	assert.NoError(t, err)
+}
+
 func TestGetSetStatusInterface(t *testing.T) {
 	itfK, err := pfh.StatusInterface()
 	assert.NoError(t, err)

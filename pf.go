@@ -86,6 +86,24 @@ func (file Handle) StatusInterface() (string, error) {
 	return C.GoString(&(pi.ifname[0])), nil
 }
 
+// Start the packet filter.
+func (file Handle) Start() error {
+	err := file.ioctl(C.DIOCSTART, nil)
+	if err != nil {
+		return fmt.Errorf("DIOCSTART: %s", err)
+	}
+	return nil
+}
+
+// Stop the packet filter
+func (file Handle) Stop() error {
+	err := file.ioctl(C.DIOCSTOP, nil)
+	if err != nil {
+		return fmt.Errorf("DIOCSTOP: %s", err)
+	}
+	return nil
+}
+
 // ioctl helper for pf dev
 func (file *Handle) ioctl(cmd uintptr, ptr unsafe.Pointer) error {
 	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, (*os.File)(file).Fd(), cmd, uintptr(ptr))
