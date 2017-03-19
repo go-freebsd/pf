@@ -104,6 +104,15 @@ func (file Handle) Stop() error {
 	return nil
 }
 
+// Statistics of the packet filter
+func (file Handle) UpdateStatistics(stats *Statistics) error {
+	err := file.ioctl(C.DIOCGETSTATUS, unsafe.Pointer(stats))
+	if err != nil {
+		return fmt.Errorf("DIOCGETSTATUS: %s", err)
+	}
+	return nil
+}
+
 // ioctl helper for pf dev
 func (file *Handle) ioctl(cmd uintptr, ptr unsafe.Pointer) error {
 	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, (*os.File)(file).Fd(), cmd, uintptr(ptr))

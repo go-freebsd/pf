@@ -29,6 +29,15 @@ func TestGetSetStatusInterface(t *testing.T) {
 	assert.Equal(t, itf, itfK)
 }
 
+func TestStatistics(t *testing.T) {
+	var stats Statistics
+
+	err := pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, stats.String())
+}
+
 func TestRule(t *testing.T) {
 	// invalid ticket
 	assert.Error(t, pfh.Rule(0, 0, nil))
