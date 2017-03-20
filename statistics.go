@@ -1,33 +1,97 @@
 package pf
 
-/*
-TODO:
-struct pf_status {
-	uint64_t	pcounters[2][2][3];
-	uint64_t	bcounters[2][2];
-	uint32_t	running;
-	uint32_t	states;
-	uint32_t	src_nodes;
-	uint32_t	since;
-	uint32_t	debug;
-	uint32_t	hostid;
-	char		ifname[IFNAMSIZ];
-	uint8_t		pf_chksum[PF_MD5_DIGEST_LENGTH];
-};
-*/
-
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // #include <net/if.h>
 // #include <net/pfvar.h>
 import "C"
 
+// SendReceivedStats stats for send and received IPv4/6 traffic
+type SendReceivedStats struct {
+	SendIPv4, ReceivedIPv4, SendIPv6, ReceivedIPv6 uint64
+}
+
+// PacketsPass num of packets passed for the interface
+func (s Statistics) PacketsPass() SendReceivedStats {
+	return SendReceivedStats{
+		SendIPv4:     uint64(s.wrap.pcounters[0][0][C.PF_PASS]),
+		ReceivedIPv4: uint64(s.wrap.pcounters[0][1][C.PF_PASS]),
+		SendIPv6:     uint64(s.wrap.pcounters[1][0][C.PF_PASS]),
+		ReceivedIPv6: uint64(s.wrap.pcounters[1][1][C.PF_PASS]),
+	}
+}
+
+// PacketsPass num of packets droped for the interface
+func (s Statistics) PacketsDrop() SendReceivedStats {
+	return SendReceivedStats{
+		SendIPv4:     uint64(s.wrap.pcounters[0][0][C.PF_DROP]),
+		ReceivedIPv4: uint64(s.wrap.pcounters[0][1][C.PF_DROP]),
+		SendIPv6:     uint64(s.wrap.pcounters[1][0][C.PF_DROP]),
+		ReceivedIPv6: uint64(s.wrap.pcounters[1][1][C.PF_DROP]),
+	}
+}
+
+// Bytes returns num of send and received bytes for the interface
+func (s Statistics) Bytes() SendReceivedStats {
+	return SendReceivedStats{
+		SendIPv4:     uint64(s.wrap.bcounters[0][0]),
+		ReceivedIPv4: uint64(s.wrap.bcounters[0][1]),
+		SendIPv6:     uint64(s.wrap.bcounters[1][0]),
+		ReceivedIPv6: uint64(s.wrap.bcounters[1][1]),
+	}
+}
+
 // Statistics about the internal packet filter
 type Statistics struct {
 	wrap C.struct_pf_status
+}
+
+// Running returns true if packet filter enabled
+func (s Statistics) Running() bool {
+	return s.wrap.running == 1
+}
+
+// RunningSince returns time since the packet filter is enabled
+func (s Statistics) RunningSince() time.Time {
+	return time.Unix(int64(s.wrap.since), 0)
+}
+
+// States num states in the packet filter
+func (s Statistics) States() int {
+	return int(s.wrap.states)
+}
+
+// SourceNodes num source nodes in the packet filter
+func (s Statistics) SourceNodes() int {
+	return int(s.wrap.src_nodes)
+}
+
+// Debug returns debug mode enabdled
+func (s Statistics) Debug() DebugMode {
+	return DebugMode(s.wrap.debug)
+}
+
+// HostID returns the ID of the host
+func (s Statistics) HostID() uint32 {
+	return uint32(s.wrap.hostid)
+}
+
+// Interface return the name of the interface if any (otherwise empty string)
+func (s Statistics) Interface() string {
+	return C.GoString(&s.wrap.ifname[0])
+}
+
+// Checksum of the statistics
+func (s Statistics) ChecksumMD5() []byte {
+	sum := make([]byte, int(C.PF_MD5_DIGEST_LENGTH))
+	for i := 0; i < int(C.PF_MD5_DIGEST_LENGTH); i++ {
+		sum[i] = byte(s.wrap.pf_chksum[i])
+	}
+	return sum
 }
 
 /* Reasons code for passing/dropping a packet */
@@ -221,7 +285,19 @@ func (s Statistics) String() string {
 		{"counter-node-insert", s.CounterNodeInsert()},
 		{"counter-node-removals", s.CounterNodeRemovals()},
 	}
-	list := make([]string, 0, len(dump))
+	list := make([]string, 0, len(dump)+11)
+
+	list = append(list, fmt.Sprintf("running: %v", s.Running()))
+	list = append(list, fmt.Sprintf("states: %d", s.States()))
+	list = append(list, fmt.Sprintf("src-nodes: %d", s.SourceNodes()))
+	list = append(list, fmt.Sprintf("since: '%s'", s.RunningSince()))
+	list = append(list, fmt.Sprintf("debug: %s", s.Debug()))
+	list = append(list, fmt.Sprintf("hostid: %d", s.HostID()))
+	list = append(list, fmt.Sprintf("interface: '%s'", s.Interface()))
+	list = append(list, fmt.Sprintf("interface-bytes: %+v", s.Bytes()))
+	list = append(list, fmt.Sprintf("interface-packets-pass: %+v", s.PacketsPass()))
+	list = append(list, fmt.Sprintf("interface-packets-drop: %+v", s.PacketsDrop()))
+	list = append(list, fmt.Sprintf("checksum: %+v", s.ChecksumMD5()))
 
 	for _, line := range dump {
 		list = append(list, fmt.Sprintf("%s: %d", line.name, line.value))
