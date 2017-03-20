@@ -38,6 +38,29 @@ func TestStatistics(t *testing.T) {
 	assert.NotEmpty(t, stats.String())
 }
 
+func TestDebugMode(t *testing.T) {
+	// default mode is urgent
+	var stats Statistics
+
+	err := pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+	assert.Equal(t, DebugModeUrgent, stats.Debug())
+
+	pfh.SetDebugMode(DebugModeNone)
+	assert.NoError(t, err)
+
+	err = pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+	assert.Equal(t, DebugModeNone, stats.Debug())
+
+	pfh.SetDebugMode(DebugModeUrgent)
+	assert.NoError(t, err)
+
+	err = pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+	assert.Equal(t, DebugModeUrgent, stats.Debug())
+}
+
 func TestRule(t *testing.T) {
 	// invalid ticket
 	assert.Error(t, pfh.Rule(0, 0, nil))

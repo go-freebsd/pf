@@ -113,6 +113,16 @@ func (file Handle) UpdateStatistics(stats *Statistics) error {
 	return nil
 }
 
+// SetDebugMode of the packetfilter
+func (file Handle) SetDebugMode(mode DebugMode) error {
+	level := C.u_int32_t(mode)
+	err := file.ioctl(C.DIOCSETDEBUG, unsafe.Pointer(&level))
+	if err != nil {
+		return fmt.Errorf("DIOCSETDEBUG: %s", err)
+	}
+	return nil
+}
+
 // ioctl helper for pf dev
 func (file *Handle) ioctl(cmd uintptr, ptr unsafe.Pointer) error {
 	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, (*os.File)(file).Fd(), cmd, uintptr(ptr))
