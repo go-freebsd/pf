@@ -174,6 +174,29 @@ func (file Handle) SetTimeout(t Timeout, d time.Duration) error {
 	return nil
 }
 
+// Limit returns the currently configured limit for the memory pool
+func (file Handle) Limit(l Limit) (uint, error) {
+	var lm C.struct_pfioc_limit
+	lm.index = C.int(l)
+	err := file.ioctl(C.DIOCGETLIMIT, unsafe.Pointer(&lm))
+	if err != nil {
+		return uint(0), fmt.Errorf("DIOCGETLIMIT: %s", err)
+	}
+	return uint(lm.limit), nil
+}
+
+// SetLimit sets hard limits on the memory pools used by the packet filter
+func (file Handle) SetLimit(l Limit, limit uint) error {
+	var lm C.struct_pfioc_limit
+	lm.index = C.int(l)
+	lm.limit = C.uint(limit)
+	err := file.ioctl(C.DIOCSETLIMIT, unsafe.Pointer(&lm))
+	if err != nil {
+		return fmt.Errorf("DIOCSETLIMIT: %s", err)
+	}
+	return nil
+}
+
 // Timeout returns the currently configured timeout duration
 func (file Handle) Timeout(t Timeout) (time.Duration, error) {
 	var tm C.struct_pfioc_tm

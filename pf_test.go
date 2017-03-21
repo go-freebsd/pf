@@ -113,6 +113,25 @@ func TestTimeouts(t *testing.T) {
 	assert.Equal(t, time.Hour*24, d)
 }
 
+func TestLimits(t *testing.T) {
+	oldLimit, err := pfh.Limit(LimitTableEntries)
+	assert.NoError(t, err)
+
+	err = pfh.SetLimit(LimitTableEntries, 512*1024*1024)
+	assert.NoError(t, err)
+
+	limit, err := pfh.Limit(LimitTableEntries)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(512*1024*1024), limit)
+
+	err = pfh.SetLimit(LimitTableEntries, oldLimit)
+	assert.NoError(t, err)
+
+	limit, err = pfh.Limit(LimitTableEntries)
+	assert.NoError(t, err)
+	assert.Equal(t, oldLimit, limit)
+}
+
 func TestRule(t *testing.T) {
 	// invalid ticket
 	assert.Error(t, pfh.Rule(0, 0, nil))
