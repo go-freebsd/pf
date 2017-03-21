@@ -105,7 +105,7 @@ func (file Handle) Stop() error {
 	return nil
 }
 
-// Statistics of the packet filter
+// UpdateStatistics of the packet filter
 func (file Handle) UpdateStatistics(stats *Statistics) error {
 	err := file.ioctl(C.DIOCGETSTATUS, unsafe.Pointer(stats))
 	if err != nil {
@@ -133,7 +133,7 @@ func (file Handle) ClearPerRuleStats() error {
 	return nil
 }
 
-// ClearPFStats	clear the internal packet filter statistics
+// ClearPFStats clear the internal packet filter statistics
 func (file Handle) ClearPFStats() error {
 	err := file.ioctl(C.DIOCCLRSTATUS, nil)
 	if err != nil {

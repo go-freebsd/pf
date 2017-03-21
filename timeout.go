@@ -39,13 +39,17 @@ const (
 	// TimeoutFragment fragment expire (default 30 sec)
 	TimeoutFragment Timeout = C.PFTM_FRAG
 	// TimeoutInterval expire interval (default 10 sec)
-	TimeoutInterval      Timeout = C.PFTM_INTERVAL
+	TimeoutInterval Timeout = C.PFTM_INTERVAL
+	// TimeoutAdaptiveStart adaptive start
 	TimeoutAdaptiveStart Timeout = C.PFTM_ADAPTIVE_START
-	TimeoutAdaptiveEnd   Timeout = C.PFTM_ADAPTIVE_END
+	// TimeoutAdaptiveEnd adaptive end
+	TimeoutAdaptiveEnd Timeout = C.PFTM_ADAPTIVE_END
 	// TimeoutSourceNode source tracking (default 0 sec)
 	TimeoutSourceNode Timeout = C.PFTM_SRC_NODE
 	// TimeoutTSDiff allowed TS diff (default 30 sec)
-	TimeoutTSDiff   Timeout = C.PFTM_TS_DIFF
-	TimeoutPurge    Timeout = C.PFTM_PURGE
+	TimeoutTSDiff Timeout = C.PFTM_TS_DIFF
+	// TimeoutPurge purge
+	TimeoutPurge Timeout = C.PFTM_PURGE
+	// TimeoutUnlinked unlinked
 	TimeoutUnlinked Timeout = C.PFTM_UNLINKED
 )

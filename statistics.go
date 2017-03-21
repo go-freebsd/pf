@@ -25,7 +25,7 @@ func (s Statistics) PacketsPass() SendReceivedStats {
 	}
 }
 
-// PacketsPass num of packets droped for the interface
+// PacketsDrop num of packets droped for the interface
 func (s Statistics) PacketsDrop() SendReceivedStats {
 	return SendReceivedStats{
 		SendIPv4:     uint64(s.wrap.pcounters[0][0][C.PF_DROP]),
@@ -85,7 +85,7 @@ func (s Statistics) Interface() string {
 	return C.GoString(&s.wrap.ifname[0])
 }
 
-// Checksum of the statistics
+// ChecksumMD5 of the statistics
 func (s Statistics) ChecksumMD5() []byte {
 	sum := make([]byte, int(C.PF_MD5_DIGEST_LENGTH))
 	for i := 0; i < int(C.PF_MD5_DIGEST_LENGTH); i++ {

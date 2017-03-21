@@ -8,10 +8,11 @@ import (
 // #include <net/pfvar.h>
 import "C"
 
+// DebugMode of the packet filter
 type DebugMode int
 
 const (
-	// DebugModeNode debugging is disabled
+	// DebugModeNone debugging is disabled
 	DebugModeNone DebugMode = C.PF_DEBUG_NONE
 	// DebugModeUrgent only urgent info
 	DebugModeUrgent DebugMode = C.PF_DEBUG_URGENT
