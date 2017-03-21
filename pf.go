@@ -123,6 +123,44 @@ func (file Handle) SetDebugMode(mode DebugMode) error {
 	return nil
 }
 
+// ClearPerRuleStats clear per-rule statistics
+func (file Handle) ClearPerRuleStats() error {
+	err := file.ioctl(C.DIOCCLRRULECTRS, nil)
+	if err != nil {
+		return fmt.Errorf("DIOCCLRRULECTRS: %s", err)
+	}
+	return nil
+}
+
+// ClearPFStats	clear the internal packet filter statistics
+func (file Handle) ClearPFStats() error {
+	err := file.ioctl(C.DIOCCLRSTATUS, nil)
+	if err != nil {
+		return fmt.Errorf("DIOCCLRSTATUS: %s", err)
+	}
+	return nil
+}
+
+// ClearSourceNodes clear the tree of source tracking nodes
+func (file Handle) ClearSourceNodes() error {
+	err := file.ioctl(C.DIOCCLRSRCNODES, nil)
+	if err != nil {
+		return fmt.Errorf("DIOCCLRSRCNODES: %s", err)
+	}
+	return nil
+}
+
+// SetHostID set the host ID, which is used by pfsync to identify
+// which host created state table entries.
+func (file Handle) SetHostID(id uint32) error {
+	hostid := C.u_int32_t(id)
+	err := file.ioctl(C.DIOCSETHOSTID, unsafe.Pointer(&hostid))
+	if err != nil {
+		return fmt.Errorf("DIOCSETHOSTID : %s", err)
+	}
+	return nil
+}
+
 // ioctl helper for pf dev
 func (file *Handle) ioctl(cmd uintptr, ptr unsafe.Pointer) error {
 	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, (*os.File)(file).Fd(), cmd, uintptr(ptr))

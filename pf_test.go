@@ -38,6 +38,15 @@ func TestStatistics(t *testing.T) {
 	assert.NotEmpty(t, stats.String())
 }
 
+func TestClearing(t *testing.T) {
+	err := pfh.ClearPFStats()
+	assert.NoError(t, err)
+	err = pfh.ClearSourceNodes()
+	assert.NoError(t, err)
+	err = pfh.ClearPerRuleStats()
+	assert.NoError(t, err)
+}
+
 func TestDebugMode(t *testing.T) {
 	// default mode is urgent
 	var stats Statistics
@@ -46,19 +55,41 @@ func TestDebugMode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, DebugModeUrgent, stats.Debug())
 
-	pfh.SetDebugMode(DebugModeNone)
+	err = pfh.SetDebugMode(DebugModeNone)
 	assert.NoError(t, err)
 
 	err = pfh.UpdateStatistics(&stats)
 	assert.NoError(t, err)
 	assert.Equal(t, DebugModeNone, stats.Debug())
 
-	pfh.SetDebugMode(DebugModeUrgent)
+	err = pfh.SetDebugMode(DebugModeUrgent)
 	assert.NoError(t, err)
 
 	err = pfh.UpdateStatistics(&stats)
 	assert.NoError(t, err)
 	assert.Equal(t, DebugModeUrgent, stats.Debug())
+}
+
+func TestHostID(t *testing.T) {
+	var stats Statistics
+
+	err := pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+	oldHost := stats.HostID()
+
+	err = pfh.SetHostID(12345678)
+	assert.NoError(t, err)
+
+	err = pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+	assert.Equal(t, uint32(12345678), stats.HostID())
+
+	err = pfh.SetHostID(oldHost)
+	assert.NoError(t, err)
+
+	err = pfh.UpdateStatistics(&stats)
+	assert.NoError(t, err)
+	assert.Equal(t, oldHost, stats.HostID())
 }
 
 func TestRule(t *testing.T) {
