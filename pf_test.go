@@ -3,6 +3,7 @@ package pf
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestStartStop(t *testing.T) {
@@ -90,6 +91,26 @@ func TestHostID(t *testing.T) {
 	err = pfh.UpdateStatistics(&stats)
 	assert.NoError(t, err)
 	assert.Equal(t, oldHost, stats.HostID())
+}
+
+func TestTimeouts(t *testing.T) {
+	d, err := pfh.Timeout(TimeoutTCPEstablished)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Hour*24, d)
+
+	err = pfh.SetTimeout(TimeoutTCPEstablished, time.Hour)
+	assert.NoError(t, err)
+
+	d, err = pfh.Timeout(TimeoutTCPEstablished)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Hour, d)
+
+	err = pfh.SetTimeout(TimeoutTCPEstablished, time.Hour*24)
+	assert.NoError(t, err)
+
+	d, err = pfh.Timeout(TimeoutTCPEstablished)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Hour*24, d)
 }
 
 func TestRule(t *testing.T) {

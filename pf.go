@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -159,6 +160,31 @@ func (file Handle) SetHostID(id uint32) error {
 		return fmt.Errorf("DIOCSETHOSTID : %s", err)
 	}
 	return nil
+}
+
+// SetTimeout set the state timeout to specified duration
+func (file Handle) SetTimeout(t Timeout, d time.Duration) error {
+	var tm C.struct_pfioc_tm
+	tm.timeout = C.int(t)
+	tm.seconds = C.int(d / time.Second)
+	err := file.ioctl(C.DIOCSETTIMEOUT, unsafe.Pointer(&tm))
+	if err != nil {
+		return fmt.Errorf("DIOCSETTIMEOUT: %s", err)
+	}
+	return nil
+}
+
+// Timeout returns the currently configured timeout duration
+func (file Handle) Timeout(t Timeout) (time.Duration, error) {
+	var tm C.struct_pfioc_tm
+	var d time.Duration
+	tm.timeout = C.int(t)
+	err := file.ioctl(C.DIOCGETTIMEOUT, unsafe.Pointer(&tm))
+	if err != nil {
+		return d, fmt.Errorf("DIOCGETTIMEOUT: %s", err)
+	}
+	d = time.Duration(int(tm.seconds)) * time.Second
+	return d, nil
 }
 
 // ioctl helper for pf dev
