@@ -64,7 +64,7 @@ func (rs RuleSet) AddRule(r *Rule) error {
 	}
 	defer func() { r.wrap.ticket = 0 }()
 	r.wrap.ticket = rs.wrap.ticket
-	err := rs.tx.file.ioctl(C.DIOCADDRULE, unsafe.Pointer(&r.wrap))
+	err := rs.tx.handle.ioctl(C.DIOCADDRULE, unsafe.Pointer(&r.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCADDRULE: %s", err)
 	}

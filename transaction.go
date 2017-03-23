@@ -39,19 +39,19 @@ import "C"
 // Transaction represents a pf transaction that can be used to
 // add, change or remove rules and rulesets atomically
 type Transaction struct {
-	file Handle
-	wrap C.struct_pfioc_trans
+	handle Handle
+	wrap   C.struct_pfioc_trans
 }
 
 // NewTransaction creates a new transaction containing the passed number
 // of rulesets. Transactions are reusable if the number of result sets
 // is not changing. For resuable transactions every transaction must be
 // closed by either Commit() or Rollback().
-func (file Handle) NewTransaction(numRS int) *Transaction {
+func (h Handle) NewTransaction(numRS int) *Transaction {
 	if numRS < 0 {
 		panic(fmt.Errorf("Negative number of rule sets invalid: %d", numRS))
 	}
-	tx := Transaction{file: file}
+	tx := Transaction{handle: h}
 	ok := int(C.init_pfioc_trans(&tx.wrap, C.int(numRS)))
 	if ok != 0 {
 		// TODO: would it be better to return nil in this case?
@@ -64,7 +64,7 @@ func (file Handle) NewTransaction(numRS int) *Transaction {
 // Begin opens pf for transaction changes. This happens atomically
 // and can fail, if there is currently a transaction open.
 func (tx Transaction) Begin() error {
-	err := tx.file.ioctl(C.DIOCXBEGIN, unsafe.Pointer(&tx.wrap))
+	err := tx.handle.ioctl(C.DIOCXBEGIN, unsafe.Pointer(&tx.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCXBEGIN: %s", err)
 	}
@@ -75,7 +75,7 @@ func (tx Transaction) Begin() error {
 // that where done since the last Begin() transaction
 func (tx Transaction) Commit() error {
 	defer C.free_pfioc_trans(&tx.wrap)
-	err := tx.file.ioctl(C.DIOCXCOMMIT, unsafe.Pointer(&tx.wrap))
+	err := tx.handle.ioctl(C.DIOCXCOMMIT, unsafe.Pointer(&tx.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCXCOMMIT: %s", err)
 	}
@@ -86,7 +86,7 @@ func (tx Transaction) Commit() error {
 // chnages that where made since the last Begin() transaction are ignored
 func (tx Transaction) Rollback() error {
 	defer C.free_pfioc_trans(&tx.wrap)
-	err := tx.file.ioctl(C.DIOCXROLLBACK, unsafe.Pointer(&tx.wrap))
+	err := tx.handle.ioctl(C.DIOCXROLLBACK, unsafe.Pointer(&tx.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCXROLLBACK: %s", err)
 	}
