@@ -1,5 +1,4 @@
 test: pf.test
-	@-sudo kldload pf 2> /dev/null
 	@-sudo pfctl -F all 2> /dev/null
 	sudo ./pf.test -test.v -test.coverprofile=coverage.out
 	@-sudo pfctl -F all 2> /dev/null
