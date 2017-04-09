@@ -2,7 +2,6 @@ package pf
 
 import (
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 	"text/scanner"
@@ -52,30 +51,8 @@ func parseAddress(addr *C.struct_pf_rule_addr, address string, negative bool) er
 		addr.neg = 1
 	}
 
-	if strings.ContainsRune(address, '/') {
-		_, n, err := net.ParseCIDR(address)
-		if err != nil {
-			return err
-		}
-		if strings.ContainsRune(address, ':') {
-			copy(addr.addr.v[0:16], n.IP)
-			copy(addr.addr.v[16:32], n.Mask)
-		} else {
-			copy(addr.addr.v[0:4], n.IP.To4())
-			copy(addr.addr.v[16:20], n.Mask)
-		}
-	} else {
-		n := net.ParseIP(address)
-		if strings.ContainsRune(address, ':') {
-			copy(addr.addr.v[0:16], n)
-			copy(addr.addr.v[16:32], net.CIDRMask(128, 128))
-		} else {
-			copy(addr.addr.v[0:4], n.To4())
-			copy(addr.addr.v[16:20], net.CIDRMask(32, 32))
-		}
-	}
-
-	return nil
+	a := Address{wrap: &addr.addr}
+	return a.ParseCIDR(address)
 }
 
 // parsePort parses the passed port into the address structure port section

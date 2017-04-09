@@ -29,7 +29,7 @@ func TestParsing(t *testing.T) {
 			">10",
 			"10.0.1.255/24",
 			"<10",
-			"pass inout inet from 0.0.0.0/0 port >10 to 10.0.1.0/24 port <10",
+			"pass inout inet from any port >10 to 10.0.1.0/24 port <10",
 		},
 		[]string{
 			"10.0.0.1",

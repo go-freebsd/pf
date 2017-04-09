@@ -1,9 +1,7 @@
 package pf
 
 import (
-	"bytes"
 	"fmt"
-	"net"
 	"strings"
 )
 
@@ -50,25 +48,11 @@ func (r Rule) String() string {
 
 // addressDump returns the pf.conf representation of the address
 func addressDump(dump []string, addr *C.struct_pf_rule_addr, af C.sa_family_t) []string {
-	var ipn net.IPNet
-
-	if af == C.AF_INET {
-		ipn.IP = addr.addr.v[0:4]
-		ipn.Mask = addr.addr.v[16:20]
-	} else {
-		ipn.IP = addr.addr.v[0:16]
-		ipn.Mask = addr.addr.v[16:32]
-	}
-
 	if addr.neg == 1 {
 		dump = append(dump, "!")
 	}
 
-	if bytes.Compare(net.IPv6zero, ipn.IP) == 0 && bytes.Compare(net.IPv6zero, ipn.Mask) == 0 {
-		dump = append(dump, "any")
-	} else {
-		dump = append(dump, ipn.String())
-	}
+	dump = append(dump, Address{wrap: &addr.addr, af: af}.String())
 
 	return portRangeDump(dump, addr)
 }
