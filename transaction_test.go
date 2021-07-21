@@ -26,7 +26,7 @@ func TestRuleSetRollback(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = frs.AddRule(&rule)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 
 	err = tx.Rollback()
 	assert.NoError(t, err)
