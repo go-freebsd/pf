@@ -62,7 +62,10 @@ func (a Anchor) ruleNV(t RuleSetType, ticket, index int, rule *Rule) error {
 	req := newNV()
 	defer req.destroy()
 	req.addString("anchor", a.Path)
-	req.addNumber("ruleset", uint64(t))
+	// the kernel maps this number with pf_get_ruleset_number: it is an
+	// action (pass, nat, rdr, ...) that selects the rule set, not the index
+	// of the rule set
+	req.addNumber("ruleset", uint64(rulesetAction[t]))
 	req.addNumber("ticket", uint64(ticket))
 	req.addNumber("nr", uint64(index))
 
