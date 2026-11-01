@@ -6,8 +6,6 @@ import (
 	"unsafe"
 )
 
-type os_File = os.File
-
 // #cgo LDFLAGS: -lpfctl
 // #include <string.h>
 // #include <stdlib.h>
@@ -44,6 +42,8 @@ static int diag_route(int dev, const char *anchor, unsigned ruleset, unsigned ti
 }
 */
 import "C"
+
+type os_File = os.File
 
 // diagGetAddrs is a temporary diagnosis, removed again.
 func diagGetAddrs(a Anchor, anchor string) []string {
