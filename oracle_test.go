@@ -353,6 +353,32 @@ func oracleRuleCases() []ruleCase {
 			}
 			return r.ParseDestination("10.0.0.2", "40901", false)
 		}},
+		{"divert-to", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetDivertTo("127.0.0.1", 40911); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "40910", false)
+		}},
+		{"divert-to inet6", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet6)
+			r.SetState(StateKeep)
+			if err := r.SetDivertTo("::1", 40913); err != nil {
+				return err
+			}
+			if err := r.ParseSource("::/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("::/0", "40912", false)
+		}},
 		{"modulate state", func(r *Rule) error {
 			tcp(r)
 			r.SetAddressFamily(AddressFamilyInet)
@@ -1039,4 +1065,28 @@ func TestRTable(t *testing.T) {
 	n, ok = r.RTable()
 	assert.True(t, ok)
 	assert.Equal(t, 3, n)
+}
+
+func TestDivertTo(t *testing.T) {
+	var r Rule
+	_, _, ok := r.DivertTo()
+	assert.False(t, ok)
+	assert.Error(t, r.SetDivertTo("127.0.0.1", 0), "no port")
+	assert.Error(t, r.SetDivertTo("nonsense", 80), "no address")
+
+	assert.NoError(t, r.SetDivertTo("127.0.0.1", 8668))
+	addr, port, ok := r.DivertTo()
+	assert.True(t, ok)
+	assert.Equal(t, "127.0.0.1", addr)
+	assert.Equal(t, uint16(8668), port)
+	assert.Equal(t, "divert-to 8668", r.divertString())
+
+	assert.NoError(t, r.SetDivertTo("::1", 1))
+	addr, port, _ = r.DivertTo()
+	assert.Equal(t, "::1", addr)
+	assert.Equal(t, uint16(1), port)
+
+	r.ClearDivertTo()
+	_, _, ok = r.DivertTo()
+	assert.False(t, ok)
 }
