@@ -66,6 +66,12 @@ func commitRules(t *testing.T, anchor string, rules ...*Rule) {
 // commitRulesOf replaces the rules of one type of the anchor.
 func commitRulesOf(t *testing.T, anchor string, typ RuleSetType, rules ...*Rule) {
 	t.Helper()
+	commitRulesOn(t, anchor, typ, nil, rules...)
+}
+
+// commitRulesOn is commitRulesOf with every rule added once per interface.
+func commitRulesOn(t *testing.T, anchor string, typ RuleSetType, interfaces []string, rules ...*Rule) {
+	t.Helper()
 	tx := pfh.NewTransaction(1)
 	rs := tx.RuleSet(0)
 	rs.SetType(typ)
@@ -78,7 +84,7 @@ func commitRulesOf(t *testing.T, anchor string, typ RuleSetType, rules ...*Rule)
 		}
 	}()
 	for _, r := range rules {
-		require.NoError(t, rs.AddRule(r))
+		require.NoError(t, rs.AddRuleOnInterfaces(r, interfaces...))
 	}
 	require.NoError(t, tx.Commit())
 	committed = true
@@ -837,4 +843,82 @@ func TestScrubLikePfctl(t *testing.T) {
 	assert.Equal(t, r.String(), back[0].String())
 	require.Len(t, shown, 1)
 	assert.Equal(t, normalize(shown[0]), normalize(r.String()))
+}
+
+// TestInterfaceListLikePfctl: "on { lo0 egress }" is one rule per interface
+// in the order of the list, for pfctl as for AddRuleOnInterfaces.
+func TestInterfaceListLikePfctl(t *testing.T) {
+	list := []string{"lo0", "egress"}
+
+	t.Run("filter", func(t *testing.T) {
+		theirs := oracleAnchor(t, "iflist-pfctl")
+		mine := oracleAnchor(t, "iflist-mine")
+		pfctl(t, "pass in quick on { lo0 egress } inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40601 keep state\n",
+			"-a", theirs, "-f", "-")
+
+		var r Rule
+		r.SetAction(ActionPass)
+		r.SetDirection(DirectionIn)
+		r.SetQuick(true)
+		r.SetProtocol(ProtocolTCP)
+		r.SetAddressFamily(AddressFamilyInet)
+		r.SetState(StateKeep)
+		require.NoError(t, r.ParseSource("10.0.0.1", "", false))
+		require.NoError(t, r.ParseDestination("10.0.0.2", "40601", false))
+		commitRulesOn(t, mine, RuleSetFilter, list, &r)
+		assert.Equal(t, "", r.Interface(), "the rule given is not changed")
+
+		want := ruleLines(pfctl(t, "", "-a", theirs, "-sr"))
+		got := ruleLines(pfctl(t, "", "-a", mine, "-sr"))
+		require.Len(t, want, 2)
+		require.Len(t, got, 2)
+		for i := range want {
+			t.Logf("pfctl loaded: %s", want[i])
+			t.Logf("library:      %s", got[i])
+			assert.Equal(t, normalize(want[i]), normalize(got[i]), "rule %d", i)
+		}
+		back, err := anchorOf(mine).Rules()
+		require.NoError(t, err)
+		require.Len(t, back, 2)
+		assert.Equal(t, "lo0", back[0].Interface())
+		assert.Equal(t, "egress", back[1].Interface())
+	})
+
+	t.Run("nat", func(t *testing.T) {
+		theirs := oracleAnchor(t, "iflist-nat-pfctl")
+		mine := oracleAnchor(t, "iflist-nat-mine")
+		pfctl(t, "nat on { lo0 egress } inet from 10.3.0.0/24 to any -> 192.0.2.4\n", "-a", theirs, "-f", "-")
+
+		var r Rule
+		r.SetAction(ActionNAT)
+		r.SetAddressFamily(AddressFamilyInet)
+		require.NoError(t, r.ParseSource("10.3.0.0/24", "", false))
+		require.NoError(t, r.ParseDestination("0.0.0.0/0", "", false))
+		require.NoError(t, r.SetRedirect("192.0.2.4", ""))
+		commitRulesOn(t, mine, RuleSetNAT, list, &r)
+
+		want := ruleLines(pfctl(t, "", "-a", theirs, "-sn"))
+		got := ruleLines(pfctl(t, "", "-a", mine, "-sn"))
+		require.Len(t, want, 2)
+		require.Len(t, got, 2)
+		for i := range want {
+			assert.Equal(t, normalize(want[i]), normalize(got[i]), "rule %d", i)
+		}
+	})
+
+	t.Run("a bad name adds nothing", func(t *testing.T) {
+		anchor := oracleAnchor(t, "iflist-bad")
+		tx := pfh.NewTransaction(1)
+		rs := tx.RuleSet(0)
+		rs.SetType(RuleSetFilter)
+		require.NoError(t, rs.SetAnchor(anchor))
+		require.NoError(t, tx.Begin())
+		defer tx.Rollback()
+		var r Rule
+		r.SetAction(ActionPass)
+		assert.Error(t, rs.AddRuleOnInterfaces(&r, "lo0", "this-interface-name-is-too-long"))
+		assert.Error(t, rs.AddRuleOnInterfaces(&r, "lo0", ""))
+		require.NoError(t, tx.Rollback())
+		assert.Empty(t, ruleLines(pfctl(t, "", "-a", anchor, "-sr")))
+	})
 }

@@ -85,3 +85,34 @@ func (rs RuleSet) AddRule(r *Rule) error {
 	}
 	return nil
 }
+
+// AddRuleOnInterfaces adds the rule once for every interface or interface
+// group, in the given order, each with its own "on <interface>": the
+// expansion pfctl makes of "on { em0 em1 }". Whether the interface is negated
+// is taken from the rule. The rule itself is not changed. Without interfaces
+// it is AddRule.
+func (rs RuleSet) AddRuleOnInterfaces(r *Rule, interfaces ...string) error {
+	if r == nil {
+		panic(fmt.Errorf("Empty/nil rules aren't permitted by pf"))
+	}
+	if len(interfaces) == 0 {
+		return rs.AddRule(r)
+	}
+	// check every name before the first rule goes to the kernel
+	rules := make([]Rule, len(interfaces))
+	for i, name := range interfaces {
+		if name == "" {
+			return fmt.Errorf("interface %d of the list is empty", i)
+		}
+		rules[i] = *r
+		if err := rules[i].SetInterface(name); err != nil {
+			return err
+		}
+	}
+	for i := range rules {
+		if err := rs.AddRule(&rules[i]); err != nil {
+			return fmt.Errorf("interface %q: %s", interfaces[i], err)
+		}
+	}
+	return nil
+}
