@@ -101,6 +101,7 @@ pfctl accounts for that.
   pfctl. `Anchor.RulesOf(type)` reads the rules of one rule set type; `Rules()`
   reads the filter rules.
 * Scrub rules with `no-df`, `min-ttl`, `max-mss`, `random-id` and `reassemble tcp` (`SetScrub`); fragments are reassembled, the `fragment reassemble` pfctl prints.
+* `queue`/`queue (std, ack)` names (`SetQueue`), `tag`/`tagged` (`SetTag`, `SetTagged`), `prio` and `set prio` (`SetPriority`, `SetSetPriority`) and dummynet pipes (`SetDummynet`, `dnpipe`/`dnqueue`). The kernels the CI runs on have no ALTQ, so the queue names are only compared with pfctl as names: the rule is accepted and shown, but whether a queue of that name does anything is not tested.
 * The routing table of a rule (`SetRTable`, `rtable N`). A rule without it leaves the routing table alone (the kernel is told -1, as pfctl does); this is not the same as `rtable 0`.
 * Tables: `CreateTable`, `DeleteTable`, `Tables`, `AddTableAddresses` and
   `TableAddresses` on a `Handle`, and `Address.SetTableName` to refer to one.

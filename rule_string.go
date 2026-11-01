@@ -72,12 +72,18 @@ func (r Rule) String() string {
 		}
 	}
 
+	dump = append(dump, r.prioString()...)
+
 	if s := r.State(); s != StateNo {
 		dump = append(dump, s.String())
 	} else if r.Action() == ActionPass {
 		// like pfctl: a pass rule that keeps no state says so (a block
 		// rule never does)
 		dump = append(dump, "no state")
+	}
+
+	if e := strings.Join(r.extrasString(), ""); e != "" {
+		dump = append(dump, e)
 	}
 
 	if d := r.divertString(); d != "" {

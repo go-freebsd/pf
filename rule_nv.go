@@ -127,6 +127,13 @@ func (r *Rule) fromNV(n *nv) error {
 	r.setRouteRaw(RouteType(num(n, "rt")))
 	r.setScrubRaw(num(n, "rule_flag"), num(n, "scrub_flags"), num(n, "min_ttl"), num(n, "max_mss"))
 	r.setRTableRaw(int64(num(n, "rtableid")))
+	qname, _ := n.str("qname")
+	pqname, _ := n.str("pqname")
+	tag, _ := n.str("tagname")
+	matchTag, _ := n.str("match_tagname")
+	setPrio, _ := n.numbers("set_prio")
+	r.setExtrasRaw(qname, pqname, tag, matchTag, num(n, "match_tag_not"), num(n, "prio"), setPrio,
+		num(n, "dnpipe"), num(n, "dnrpipe"), num(n, "dnflags"))
 	if d, ok := n.child("divert"); ok {
 		var addr []byte
 		if c, ok := d.child("addr"); ok {

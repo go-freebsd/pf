@@ -379,6 +379,172 @@ func oracleRuleCases() []ruleCase {
 			}
 			return r.ParseDestination("::/0", "40912", false)
 		}},
+		{"queue", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetQueue("foo", ""); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41001", false)
+		}},
+		{"queue pair", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetQueue("std", "ack"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41002", false)
+		}},
+		{"tag", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetTag("T1"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41003", false)
+		}},
+		{"tagged", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetTagged("T1", false); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41004", false)
+		}},
+		{"not tagged", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetTagged("T1", true); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41005", false)
+		}},
+		{"tag and tagged", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetTag("T2"); err != nil {
+				return err
+			}
+			if err := r.SetTagged("T1", false); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41006", false)
+		}},
+		{"prio", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetPriority(3); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41007", false)
+		}},
+		{"prio 0", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetPriority(0); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41008", false)
+		}},
+		{"set prio", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetSetPriority(4, 4); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41009", false)
+		}},
+		{"set prio pair", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+if err := r.SetSetPriority(3, 5); err != nil {
+				return err
+			}
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41010", false)
+		}},
+		{"dnpipe", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+r.SetDummynet(1, 0, false)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41011", false)
+		}},
+		{"dnpipe pair", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+r.SetDummynet(1, 2, false)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41012", false)
+		}},
+		{"dnqueue", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+r.SetDummynet(3, 0, true)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "41013", false)
+		}},
 		{"modulate state", func(r *Rule) error {
 			tcp(r)
 			r.SetAddressFamily(AddressFamilyInet)
@@ -1094,4 +1260,44 @@ func TestDivertTo(t *testing.T) {
 	r.ClearDivertTo()
 	_, _, ok = r.DivertTo()
 	assert.False(t, ok)
+}
+
+func TestRuleExtras(t *testing.T) {
+	var r Rule
+	_, ok := r.Priority()
+	assert.False(t, ok)
+	assert.Error(t, r.SetPriority(8))
+	assert.Error(t, r.SetSetPriority(0, 9))
+	assert.Error(t, r.SetTag(strings.Repeat("x", 100)))
+	assert.Error(t, r.SetQueue(strings.Repeat("q", 100), ""))
+
+	assert.NoError(t, r.SetPriority(0))
+	p, ok := r.Priority()
+	assert.True(t, ok)
+	assert.Equal(t, 0, p, "prio 0 is a priority")
+	r.ClearPriority()
+	_, ok = r.Priority()
+	assert.False(t, ok)
+
+	assert.NoError(t, r.SetSetPriority(3, 5))
+	a, b, ok := r.SetPriorityOf()
+	assert.True(t, ok)
+	assert.Equal(t, []int{3, 5}, []int{a, b})
+	r.ClearSetPriority()
+	_, _, ok = r.SetPriorityOf()
+	assert.False(t, ok)
+
+	r.SetDummynet(4, 5, true)
+	pipe, rev, queue, ok := r.Dummynet()
+	assert.True(t, ok)
+	assert.True(t, queue)
+	assert.Equal(t, []uint16{4, 5}, []uint16{pipe, rev})
+	r.SetDummynet(0, 0, false)
+	_, _, _, ok = r.Dummynet()
+	assert.False(t, ok)
+
+	assert.NoError(t, r.SetTagged("a", true))
+	name, neg := r.Tagged()
+	assert.Equal(t, "a", name)
+	assert.True(t, neg)
 }
