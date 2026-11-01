@@ -76,7 +76,8 @@ the tests in FreeBSD 14.3 and 15.0 virtual machines.
 # What the library covers
 
 * Filter rules (`pass`, `block`/`drop`): action, direction, `log`, `quick`,
-  address family, protocol, source and destination address (host, network,
+  interface or interface group (`on em0`, `on ! em0`: `SetInterface`,
+  `SetInterfaceNot`; also for the translation rules), address family, protocol, source and destination address (host, network,
   range, `!`, tables, dynamic interface addresses) with ports and all port
   operators, and the state option. `String()` writes `no state` for a pass rule
   that keeps no state, as pfctl does.
@@ -93,5 +94,5 @@ the tests in FreeBSD 14.3 and 15.0 virtual machines.
 * Transactions, status, debug level, host id (in network byte order, as
   pfctl shows it), limits and timeouts.
 
-Not modelled: interfaces (`on em0`), `route-to`, `divert`, queues, TCP flags,
+Not modelled: lists of interfaces (`on { em0 em1 }`), `route-to`, `divert`, queues, TCP flags,
 the routing table, scrub options, and pool options other than the port range.

@@ -96,6 +96,13 @@ func (r *Rule) fromNV(n *nv) error {
 		C.uint64_t(num(n, "keep_state")), C.uint64_t(num(n, "af")),
 		C.uint64_t(num(n, "proto")))
 
+	if name, ok := n.str("ifname"); ok {
+		if err := r.SetInterface(name); err != nil {
+			return err
+		}
+	}
+	r.SetInterfaceNot(num(n, "ifnot") != 0)
+
 	packets, _ := n.numbers("packets")
 	bytes, _ := n.numbers("bytes")
 	for len(packets) < 2 {

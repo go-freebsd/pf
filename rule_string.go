@@ -25,6 +25,14 @@ func (r Rule) String() string {
 		dump = append(dump, "quick")
 	}
 
+	if itf := r.Interface(); itf != "" {
+		if r.InterfaceNot() {
+			dump = append(dump, "on", "!", itf)
+		} else {
+			dump = append(dump, "on", itf)
+		}
+	}
+
 	if af := r.AddressFamily(); af != AddressFamilyAny {
 		dump = append(dump, r.AddressFamily().String())
 	}

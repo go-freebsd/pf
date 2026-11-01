@@ -250,6 +250,39 @@ func oracleRuleCases() []ruleCase {
 			}
 			return r.ParseDestination("10.0.0.2", "", false)
 		}},
+		{"on interface", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetInterface("lo0"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40501", false)
+		}},
+		{"not on interface", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionOut)
+			r.SetQuick(true)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetInterface("lo0"); err != nil {
+				return err
+			}
+			r.SetInterfaceNot(true)
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40502", false)
+		}},
+		{"on interface group", func(r *Rule) error {
+			r.SetAction(ActionDrop)
+			r.SetAddressFamily(AddressFamilyInet6)
+			return r.SetInterface("egress")
+		}},
 		{"any to any", func(r *Rule) error {
 			r.SetAction(ActionPass)
 			r.SetDirection(DirectionOut)
@@ -294,6 +327,9 @@ func TestRulesLoadedByPfctl(t *testing.T) {
 		"pass in inet6 proto tcp from 2001:db8::/32 to ::1 port 40004 no state",
 		"pass out inet proto tcp from 10.0.0.1 port 40013:40020 to ! 10.0.2.0/24 port != 40021 keep state",
 		"pass inet proto icmp from 10.0.0.1 to 10.0.0.2",
+		"pass in on lo0 inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40501 keep state",
+		"pass out quick on ! lo0 inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40502 keep state",
+		"block drop on egress inet6 all",
 	}, "\n") + "\n"
 	pfctl(t, ruleset, "-a", anchor, "-f", "-")
 
@@ -301,7 +337,7 @@ func TestRulesLoadedByPfctl(t *testing.T) {
 	read, err := anchorOf(anchor).Rules()
 	require.NoError(t, err)
 	require.Len(t, read, len(shown), "number of rules")
-	require.Len(t, read, 5)
+	require.Len(t, read, 8)
 
 	for i := range read {
 		t.Logf("pfctl:   %s", shown[i])
@@ -516,6 +552,36 @@ func translationCases() []struct {
 			}
 			return r.SetRedirect("192.0.2.1", "")
 		}},
+		{"nat on interface", RuleSetNAT, func(r *Rule) error {
+			r.SetAction(ActionNAT)
+			r.SetAddressFamily(AddressFamilyInet)
+			if err := r.SetInterface("lo0"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.2.0.0/24", "", false); err != nil {
+				return err
+			}
+			if err := r.ParseDestination("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.SetRedirect("192.0.2.2", "")
+		}},
+		{"rdr not on interface", RuleSetRedirect, func(r *Rule) error {
+			r.SetAction(ActionRDR)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetProtocol(ProtocolTCP)
+			if err := r.SetInterface("lo0"); err != nil {
+				return err
+			}
+			r.SetInterfaceNot(true)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			if err := r.ParseDestination("192.0.2.3", "40503", false); err != nil {
+				return err
+			}
+			return r.SetRedirect("10.0.0.6", "40504")
+		}},
 		{"no nat", RuleSetNAT, func(r *Rule) error {
 			r.SetAction(ActionNoNAT)
 			r.SetAddressFamily(AddressFamilyInet)
@@ -607,6 +673,8 @@ func TestTranslationRulesLoadedByPfctl(t *testing.T) {
 		"rdr inet proto tcp from any to 192.0.2.1 port 40001 -> 10.0.0.5 port 40002",
 		"no rdr inet proto tcp from any to 192.0.2.9 port 40003",
 		"binat inet from 10.0.0.9 to any -> 192.0.2.9",
+		"nat on lo0 inet from 10.2.0.0/24 to any -> 192.0.2.2",
+		"rdr on ! lo0 inet proto tcp from any to 192.0.2.3 port 40503 -> 10.0.0.6 port 40504",
 	}, "\n")+"\n", "-a", anchor, "-f", "-")
 
 	shown := ruleLines(pfctl(t, "", "-a", anchor, "-sn"))
