@@ -30,15 +30,14 @@ jobs:
               grep -n -A14 'struct[[:space:]]*pf_pooladdr[[:space:]]*{' /usr/include/net/pfvar.h /usr/include/netpfil/pf/pf.h | head -n 20
               grep -n -A12 'struct[[:space:]]*pf_pool[[:space:]]*{' /usr/include/net/pfvar.h /usr/include/netpfil/pf/pf.h | head -n 18
               echo "--- pfctl output"
-              cat > /tmp/r.conf <<'EOT'
-nat on lo0 inet from 10.0.0.0/24 to any -> 192.0.2.1
-no nat on lo0 inet from 10.1.0.0/24 to any
-rdr on lo0 inet proto tcp from any to 192.0.2.1 port 40001 -> 10.0.0.5 port 40002
-no rdr on lo0 inet proto tcp from any to 192.0.2.9 port 40003
-binat on lo0 inet from 10.0.0.9 to any -> 192.0.2.9
-scrub in on lo0 all no-df
-pass in inet proto tcp from any to <t1> port 40004 keep state
-EOT
+              printf '%s\n' \
+                'nat on lo0 inet from 10.0.0.0/24 to any -> 192.0.2.1' \
+                'no nat on lo0 inet from 10.1.0.0/24 to any' \
+                'rdr on lo0 inet proto tcp from any to 192.0.2.1 port 40001 -> 10.0.0.5 port 40002' \
+                'no rdr on lo0 inet proto tcp from any to 192.0.2.9 port 40003' \
+                'binat on lo0 inet from 10.0.0.9 to any -> 192.0.2.9' \
+                'scrub in on lo0 all no-df' \
+                'pass in inet proto tcp from any to <t1> port 40004 keep state' > /tmp/r.conf
               pfctl -a probe -f /tmp/r.conf 2>&1
               echo "--- -sn"; pfctl -a probe -sn 2>&1
               echo "--- -sn -vv"; pfctl -a probe -sn -vv 2>&1
