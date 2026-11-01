@@ -384,7 +384,7 @@ func oracleRuleCases() []ruleCase {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetQueue("foo", ""); err != nil {
+			if err := r.SetQueue("foo", ""); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -397,7 +397,7 @@ if err := r.SetQueue("foo", ""); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetQueue("std", "ack"); err != nil {
+			if err := r.SetQueue("std", "ack"); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -410,7 +410,7 @@ if err := r.SetQueue("std", "ack"); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetTag("T1"); err != nil {
+			if err := r.SetTag("T1"); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -423,7 +423,7 @@ if err := r.SetTag("T1"); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetTagged("T1", false); err != nil {
+			if err := r.SetTagged("T1", false); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -436,7 +436,7 @@ if err := r.SetTagged("T1", false); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetTagged("T1", true); err != nil {
+			if err := r.SetTagged("T1", true); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -449,7 +449,7 @@ if err := r.SetTagged("T1", true); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetTag("T2"); err != nil {
+			if err := r.SetTag("T2"); err != nil {
 				return err
 			}
 			if err := r.SetTagged("T1", false); err != nil {
@@ -465,7 +465,7 @@ if err := r.SetTag("T2"); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetPriority(3); err != nil {
+			if err := r.SetPriority(3); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -478,7 +478,7 @@ if err := r.SetPriority(3); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetPriority(0); err != nil {
+			if err := r.SetPriority(0); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -491,7 +491,7 @@ if err := r.SetPriority(0); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetSetPriority(4, 4); err != nil {
+			if err := r.SetSetPriority(4, 4); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -504,7 +504,7 @@ if err := r.SetSetPriority(4, 4); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-if err := r.SetSetPriority(3, 5); err != nil {
+			if err := r.SetSetPriority(3, 5); err != nil {
 				return err
 			}
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
@@ -517,7 +517,7 @@ if err := r.SetSetPriority(3, 5); err != nil {
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-r.SetDummynet(1, 0, false)
+			r.SetDummynet(1, 0, false)
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
 				return err
 			}
@@ -528,7 +528,7 @@ r.SetDummynet(1, 0, false)
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-r.SetDummynet(1, 2, false)
+			r.SetDummynet(1, 2, false)
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
 				return err
 			}
@@ -539,7 +539,7 @@ r.SetDummynet(1, 2, false)
 			r.SetDirection(DirectionIn)
 			r.SetAddressFamily(AddressFamilyInet)
 			r.SetState(StateKeep)
-r.SetDummynet(3, 0, true)
+			r.SetDummynet(3, 0, true)
 			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
 				return err
 			}
