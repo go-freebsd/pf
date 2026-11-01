@@ -24,48 +24,32 @@ jobs:
             {
               uname -sr
               kldload pf 2>&1
-              echo "--- constants"
-              grep -hE 'define[[:space:]]+(PFRULE_|PFSTATE_|PF_DIVERT|PF_FRAG|PF_SCRUB|PF_NOSCRUB|PF_DEFER|PF_NOPFROUTE|PF_FASTROUTE)' /usr/include/net/pfvar.h /usr/include/netpfil/pf/pf.h | head -60
-              echo "--- divert member"
-              grep -n -B2 -A4 'divert' /usr/include/netpfil/pf/pf.h | head -40
-              echo "--- scrub and rtable"
-              printf '%s\n' \
-                'scrub in inet all no-df min-ttl 64 max-mss 1440 random-id reassemble tcp fragment crop' \
-                'scrub out inet all fragment drop-ovl' \
-                'scrub in inet all fragment reassemble' \
-                'scrub in inet all' \
-                > /tmp/s.conf
-              pfctl -a ps -f /tmp/s.conf 2>&1
-              pfctl -a ps -sr 2>&1
-              printf '%s\n' \
-                'pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40001 rtable 3 keep state' \
-                'pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40002 keep state' \
-                'pass in inet proto udp from 10.0.0.1 to 10.0.0.2 port 40003 rtable 0 no state' \
-                > /tmp/r.conf
-              pfctl -a pr -f /tmp/r.conf 2>&1
-              pfctl -a pr -sr 2>&1
-              echo "--- divert"
-              printf '%s\n' \
-                'pass in inet proto tcp from any to any port 40900 divert-to 127.0.0.1 port 40901' \
-                'pass in inet proto tcp from any to any port 40902 divert-reply' \
-                'pass in inet proto tcp from any to any port 40903 divert-packet port 40904' \
-                > /tmp/d.conf
-              pfctl -a pd -f /tmp/d.conf 2>&1
-              pfctl -a pd -sr -vv 2>&1 | grep -v '^  \['
-              echo "--- queues and tags"
-              printf '%s\n' \
-                'pass in inet proto tcp from any to any port 41001 queue foo' \
-                'pass in inet proto tcp from any to any port 41002 tag T1 keep state' \
-                'pass in inet proto tcp from any to any port 41003 tagged T1 keep state' \
-                'pass in inet proto tcp from any to any port 41004 !tagged T1 keep state' \
-                'pass in inet proto tcp from any to any port 41005 prio 3 keep state' \
-                'match in inet proto tcp from any to any port 41006 set prio 4' \
-                'pass in inet proto tcp from any to any port 41007 dnpipe 1' \
-                'pass in inet proto tcp from any to any port 41008 dnqueue (1, 2)' \
-                > /tmp/q.conf
-              pfctl -a pq -f /tmp/q.conf 2>&1
-              pfctl -a pq -f /tmp/q.conf 2>&1
-              pfctl -a pq -sr 2>&1
+              n=0
+              try() {
+                n=$((n+1))
+                echo "--- $1"
+                printf '%s\n' "$1" | pfctl -a "p$n" -f - 2>&1 | grep -v ALTQ
+                pfctl -a "p$n" -sr -vv 2>&1 | grep -v 'ALTQ\|^  \['
+                pfctl -a "p$n" -sn -vv 2>&1 | grep -v 'ALTQ\|^  \['
+              }
+              try 'scrub in inet all no-df'
+              try 'scrub in inet all min-ttl 64'
+              try 'scrub in inet all max-mss 1440'
+              try 'scrub in inet all random-id'
+              try 'scrub in inet all reassemble tcp'
+              try 'scrub in inet all no-df min-ttl 64 max-mss 1440 random-id reassemble tcp fragment reassemble'
+              try 'scrub in inet all fragment reassemble'
+              try 'scrub in inet all'
+              try 'pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40002 keep state'
+              try 'pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40003 rtable 0 keep state'
+              try 'pass in inet proto tcp from any to any port 40900 divert-to 127.0.0.1 port 40901'
+              try 'pass in inet6 proto tcp from any to any port 40900 divert-to ::1 port 40901'
+              try 'pass in inet proto tcp from any to any port 41001 keep state queue (std, ack)'
+              try 'pass in inet proto tcp from any to any port 41002 keep state tag T1'
+              try 'pass in inet proto tcp from any to any port 41009 keep state tagged T1 tag T2'
+              try 'pass in inet proto tcp from any to any port 41010 keep state set prio (3, 5)'
+              try 'pass in inet proto tcp from any to any port 41011 keep state dnpipe (1, 2)'
+              try 'pass in inet proto tcp from any to any port 41012 keep state dnqueue 3'
             } > probe.log 2>&1
             exit 0
       - run: |
