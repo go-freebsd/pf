@@ -1,0 +1,74 @@
+name: Probe
+
+on:
+  push:
+
+jobs:
+  probe:
+    name: Probe ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["14.3", "15.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ matrix.release }}
+          usesh: true
+          copyback: true
+          run: |
+            set +e
+            cd "$GITHUB_WORKSPACE"
+            {
+              uname -sr
+              kldload pf 2>&1
+              echo "--- constants"
+              grep -hE 'define[[:space:]]+(PFRULE_|PFSTATE_|PF_DIVERT|PF_FRAG|PF_SCRUB|PF_NOSCRUB|PF_DEFER|PF_NOPFROUTE|PF_FASTROUTE)' /usr/include/net/pfvar.h /usr/include/netpfil/pf/pf.h | head -60
+              echo "--- divert member"
+              grep -n -B2 -A4 'divert' /usr/include/netpfil/pf/pf.h | head -40
+              echo "--- scrub and rtable"
+              printf '%s\n' \
+                'scrub in inet all no-df min-ttl 64 max-mss 1440 random-id reassemble tcp fragment crop' \
+                'scrub out inet all fragment drop-ovl' \
+                'scrub in inet all fragment reassemble' \
+                'scrub in inet all' \
+                > /tmp/s.conf
+              pfctl -a ps -f /tmp/s.conf 2>&1
+              pfctl -a ps -sr 2>&1
+              printf '%s\n' \
+                'pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40001 rtable 3 keep state' \
+                'pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40002 keep state' \
+                'pass in inet proto udp from 10.0.0.1 to 10.0.0.2 port 40003 rtable 0 no state' \
+                > /tmp/r.conf
+              pfctl -a pr -f /tmp/r.conf 2>&1
+              pfctl -a pr -sr 2>&1
+              echo "--- divert"
+              printf '%s\n' \
+                'pass in inet proto tcp from any to any port 40900 divert-to 127.0.0.1 port 40901' \
+                'pass in inet proto tcp from any to any port 40902 divert-reply' \
+                'pass in inet proto tcp from any to any port 40903 divert-packet port 40904' \
+                > /tmp/d.conf
+              pfctl -a pd -f /tmp/d.conf 2>&1
+              pfctl -a pd -sr -vv 2>&1 | grep -v '^  \['
+              echo "--- queues and tags"
+              printf '%s\n' \
+                'pass in inet proto tcp from any to any port 41001 queue foo' \
+                'pass in inet proto tcp from any to any port 41002 tag T1 keep state' \
+                'pass in inet proto tcp from any to any port 41003 tagged T1 keep state' \
+                'pass in inet proto tcp from any to any port 41004 !tagged T1 keep state' \
+                'pass in inet proto tcp from any to any port 41005 prio 3 keep state' \
+                'match in inet proto tcp from any to any port 41006 set prio 4' \
+                'pass in inet proto tcp from any to any port 41007 dnpipe 1' \
+                'pass in inet proto tcp from any to any port 41008 dnqueue (1, 2)' \
+                > /tmp/q.conf
+              pfctl -a pq -f /tmp/q.conf 2>&1
+              kldload dummynet 2>&1; kldload ipfw 2>&1
+              pfctl -a pq -f /tmp/q.conf 2>&1
+              pfctl -a pq -sr 2>&1
+            } > probe.log 2>&1
+            exit 0
+      - run: |
+          msg=$(sed -e 's/%/%25/g' probe.log | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=probe ${{ matrix.release }}::$msg"
