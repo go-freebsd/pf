@@ -77,7 +77,7 @@ func (a Anchor) ruleOf(t RuleSetType, ticket, index int, rule *Rule) error {
 	if err := a.ruleNV(t, ticket, index, rule); err != nil {
 		return err
 	}
-	if Action(rule.wrap.rule.action).translates() || rule.Route() != RouteNone {
+	if kind, _ := rule.Route(); Action(rule.wrap.rule.action).translates() || kind != RouteNone {
 		return a.readPool(ticket, index, rule)
 	}
 	return nil
