@@ -64,10 +64,17 @@ func commitRules(t *testing.T, anchor string, rules ...*Rule) {
 	rs.SetType(RuleSetFilter)
 	require.NoError(t, rs.SetAnchor(anchor))
 	require.NoError(t, tx.Begin())
+	committed := false
+	defer func() {
+		if !committed {
+			tx.Rollback()
+		}
+	}()
 	for _, r := range rules {
 		require.NoError(t, rs.AddRule(r))
 	}
 	require.NoError(t, tx.Commit())
+	committed = true
 }
 
 var (
@@ -86,6 +93,8 @@ func normalize(s string) string {
 	s = reHost.ReplaceAllString(s, "")
 	s = strings.ReplaceAll(s, " flags S/SA", "")
 	s = strings.ReplaceAll(s, " inout", "")
+	// the library prints nothing for a rule without state, pfctl "no state"
+	s = strings.ReplaceAll(s, " no state", "")
 	s = strings.Replace(s, "block drop", "drop", 1)
 	s = strings.Replace(s, "block", "drop", 1)
 	s = strings.ReplaceAll(s, " all", " from any to any")
@@ -348,12 +357,12 @@ func TestStatusLikePfctl(t *testing.T) {
 	defer pfh.Stop()
 	require.NoError(t, pfh.UpdateStatistics(&stats))
 	assert.True(t, stats.Running())
-	assert.Contains(t, pfctl(t, "", "-si"), "Status: Enabled")
+	assert.Contains(t, pfctl(t, "", "-si", "-v"), "Status: Enabled")
 
 	require.NoError(t, pfh.Stop())
 	require.NoError(t, pfh.UpdateStatistics(&stats))
 	assert.False(t, stats.Running())
-	assert.Contains(t, pfctl(t, "", "-si"), "Status: Disabled")
+	assert.Contains(t, pfctl(t, "", "-si", "-v"), "Status: Disabled")
 
 	// debug level; pfctl calls "noisy" loud
 	names := map[DebugMode]string{
@@ -365,7 +374,7 @@ func TestStatusLikePfctl(t *testing.T) {
 		require.NoError(t, pfh.SetDebugMode(mode))
 		require.NoError(t, pfh.UpdateStatistics(&stats))
 		assert.Equal(t, mode, stats.Debug())
-		assert.Contains(t, pfctl(t, "", "-si"), "Debug: "+name, "mode %s", mode)
+		assert.Contains(t, pfctl(t, "", "-si", "-v"), "Debug: "+name, "mode %s", mode)
 	}
 
 	// host id
@@ -373,12 +382,12 @@ func TestStatusLikePfctl(t *testing.T) {
 	old := stats.HostID()
 	defer pfh.SetHostID(old)
 	require.NoError(t, pfh.SetHostID(0x1badcafe))
-	assert.Contains(t, pfctl(t, "", "-si"), "Hostid:   0x1badcafe")
+	assert.Contains(t, pfctl(t, "", "-si", "-v"), "Hostid:   0x1badcafe")
 	require.NoError(t, pfh.UpdateStatistics(&stats))
 	assert.Equal(t, uint32(0x1badcafe), stats.HostID())
 
 	// state table
-	out := pfctl(t, "", "-si")
+	out := pfctl(t, "", "-si", "-v")
 	require.NoError(t, pfh.UpdateStatistics(&stats))
 	re := regexp.MustCompile(`(?m)^\s+current entries\s+(\d+)`)
 	m := re.FindStringSubmatch(out)

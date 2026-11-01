@@ -64,6 +64,10 @@ func (rs RuleSet) AddRule(r *Rule) error {
 	}
 	defer func() { r.wrap.ticket = 0 }()
 	r.wrap.ticket = rs.wrap.ticket
+	// the kernel adds the rule to the rule set named by the rule itself:
+	// without the anchor the rule goes to the main rule set and fails with
+	// EBUSY (its ticket belongs to the anchor's rule set)
+	r.wrap.anchor = rs.wrap.anchor
 	err := rs.tx.handle.ioctl(C.DIOCADDRULE, unsafe.Pointer(&r.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCADDRULE: %s", err)
