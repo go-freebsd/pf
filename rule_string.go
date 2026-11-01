@@ -49,8 +49,9 @@ func (r Rule) String() string {
 
 	if s := r.State(); s != StateNo {
 		dump = append(dump, s.String())
-	} else if a := r.Action(); a == ActionPass || a == ActionDrop {
-		// like pfctl: a filter rule that keeps no state says so
+	} else if r.Action() == ActionPass {
+		// like pfctl: a pass rule that keeps no state says so (a block
+		// rule never does)
 		dump = append(dump, "no state")
 	}
 

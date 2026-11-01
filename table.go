@@ -29,11 +29,11 @@ static int table_io_added(struct pfioc_table *io) { return io->pfrio_nadd; }
 static size_t pfr_table_size(void) { return sizeof(struct pfr_table); }
 static size_t pfr_addr_size(void) { return sizeof(struct pfr_addr); }
 
-static void pfr_table_set(struct pfr_table *t, const char *anchor, const char *name) {
+static void pfr_table_set(struct pfr_table *t, const char *anchor, const char *name, int persist) {
 	memset(t, 0, sizeof(*t));
 	strlcpy(t->pfrt_anchor, anchor, sizeof(t->pfrt_anchor));
 	strlcpy(t->pfrt_name, name, sizeof(t->pfrt_name));
-	t->pfrt_flags = PFR_TFLAG_PERSIST;
+	t->pfrt_flags = persist ? PFR_TFLAG_PERSIST : 0;
 }
 
 static const char *pfr_table_name(struct pfr_table *t) { return t->pfrt_name; }
@@ -81,7 +81,7 @@ func (h Handle) CreateTable(anchor, name string) error {
 	defer C.free(unsafe.Pointer(ca))
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
-	C.pfr_table_set((*C.struct_pfr_table)(buf), ca, cn)
+	C.pfr_table_set((*C.struct_pfr_table)(buf), ca, cn, 1)
 	_, err := h.tableOp(C.DIOCRADDTABLES, "DIOCRADDTABLES", "", "", buf, int(C.pfr_table_size()), 1)
 	return err
 }
@@ -94,7 +94,7 @@ func (h Handle) DeleteTable(anchor, name string) error {
 	defer C.free(unsafe.Pointer(ca))
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
-	C.pfr_table_set((*C.struct_pfr_table)(buf), ca, cn)
+	C.pfr_table_set((*C.struct_pfr_table)(buf), ca, cn, 0)
 	_, err := h.tableOp(C.DIOCRDELTABLES, "DIOCRDELTABLES", "", "", buf, int(C.pfr_table_size()), 1)
 	return err
 }

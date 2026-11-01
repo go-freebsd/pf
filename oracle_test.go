@@ -107,6 +107,8 @@ func normalize(s string) string {
 	// "flags any" for a rule without TCP flags
 	s = strings.ReplaceAll(s, " rtable 0", "")
 	s = strings.ReplaceAll(s, " flags any", "")
+	// the way a scrub rule without options is described
+	s = strings.ReplaceAll(s, " fragment reassemble", "")
 	s = strings.Replace(s, "block drop", "drop", 1)
 	s = strings.Replace(s, "block", "drop", 1)
 	s = strings.ReplaceAll(s, " all", " from any to any")
