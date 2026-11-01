@@ -90,14 +90,14 @@ func (r Rule) scrubString() string {
 	if o.NoDF {
 		parts = append(parts, "no-df")
 	}
+	if o.RandomID {
+		parts = append(parts, "random-id")
+	}
 	if o.MinTTL != 0 {
 		parts = append(parts, fmt.Sprintf("min-ttl %d", o.MinTTL))
 	}
 	if o.MaxMSS != 0 {
 		parts = append(parts, fmt.Sprintf("max-mss %d", o.MaxMSS))
-	}
-	if o.RandomID {
-		parts = append(parts, "random-id")
 	}
 	if o.ReassembleTCP {
 		parts = append(parts, "reassemble tcp")
