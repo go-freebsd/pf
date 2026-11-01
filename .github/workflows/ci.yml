@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    name: Linux (formatting)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      # The package uses cgo against FreeBSD headers (net/pfvar.h), so it can
+      # only be built and vetted inside a FreeBSD VM; formatting can be checked anywhere.
+      - name: gofmt
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then echo "::error::gofmt needed:"; echo "$out"; exit 1; fi
+
+  freebsd:
+    name: FreeBSD ${{ matrix.release }} (real pf)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["14.3", "15.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test in FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ matrix.release }}
+          usesh: true
+          copyback: true
+          prepare: |
+            pkg install -y go
+          run: |
+            # The test command never fails this script: the verdict is written
+            # to test.rc and judged by the next step, so test.log always
+            # reaches the host even when the tests fail.
+            set +e
+            cd "$GITHUB_WORKSPACE"
+            {
+              echo "== $(uname -sr), osreldate $(sysctl -n kern.osreldate)"
+              kldload pf 2>&1 || true
+              kldstat | grep -i pf || echo "pf module NOT loaded"
+              pfctl -s info 2>&1 | head -n 3
+              go version
+            } > test.log 2>&1
+            rc=0
+            go vet ./... >> test.log 2>&1 || rc=$?
+            if [ "$rc" -eq 0 ]; then
+              # The tests change the packet filter rules of the VM: they need
+              # root, which the VM shell is. -p 1 keeps packages sequential.
+              go test -p 1 -v -count=1 ./... >> test.log 2>&1 || rc=$?
+            fi
+            echo "$rc" > test.rc
+            exit 0
+      - name: Surface FreeBSD test output
+        if: always()
+        run: |
+          if [ ! -f test.log ]; then
+            echo "::error::test.log was not copied back from the VM"
+            exit 1
+          fi
+          # Job logs cannot always be downloaded; annotations can be read through the API.
+          grep -E '^(--- FAIL|FAIL|panic:)' test.log | head -n 10 | while IFS= read -r line; do
+            echo "::error title=FreeBSD ${{ matrix.release }}::$line"
+          done
+          for name in $(grep -E '^--- FAIL' test.log | awk '{print $3}' | head -n 12); do
+            body=$(awk -v t="$name" '$0 == "=== RUN   " t {on=1} on {print} on && index($0, "--- FAIL: " t " ") == 1 {exit}' test.log | head -c 20000 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::notice title=FreeBSD ${{ matrix.release }} $name::$body"
+          done
+          res=$(grep -E -- '^(--- |ok |FAIL|PASS|panic)' test.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=FreeBSD ${{ matrix.release }} test results::$res"
+          msg=$(tail -n 120 test.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=FreeBSD ${{ matrix.release }} test log (last 120 lines)::$msg"
+          rc=$(cat test.rc 2>/dev/null || echo missing)
+          echo "test exit status: $rc"
+          [ "$rc" = "0" ]
