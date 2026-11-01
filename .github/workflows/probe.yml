@@ -64,7 +64,6 @@ jobs:
                 'pass in inet proto tcp from any to any port 41008 dnqueue (1, 2)' \
                 > /tmp/q.conf
               pfctl -a pq -f /tmp/q.conf 2>&1
-              kldload dummynet 2>&1; kldload ipfw 2>&1
               pfctl -a pq -f /tmp/q.conf 2>&1
               pfctl -a pq -sr 2>&1
             } > probe.log 2>&1
