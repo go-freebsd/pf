@@ -7,6 +7,8 @@ import (
 	"unsafe"
 )
 
+// #include <stdlib.h>
+// #include <string.h>
 // #include <sys/ioctl.h>
 // #include <net/if.h>
 // #include <net/pfvar.h>
@@ -18,6 +20,11 @@ static void rule_set_proxy_ports(struct pf_rule *r, unsigned int first, unsigned
 }
 
 static unsigned int rule_proxy_port(struct pf_rule *r, int i) { return r->rpool.proxy_port[i]; }
+
+static void pool_set_ifname(struct pfioc_pooladdr *pp, const char *name) {
+	strlcpy(pp->addr.ifname, name, sizeof(pp->addr.ifname));
+}
+static const char *pool_ifname(struct pfioc_pooladdr *pp) { return pp->addr.ifname; }
 */
 import "C"
 
@@ -58,7 +65,7 @@ func (r *Rule) SetRedirect(address, ports string) error {
 			}
 		}
 	}
-	r.pool = []C.struct_pf_addr_wrap{wrap}
+	r.pool = []poolAddr{{addr: wrap}}
 	r.setProxyPorts(uint(first), uint(last), 0)
 	return nil
 }
@@ -69,7 +76,7 @@ func (r Rule) Redirect() (address, ports string) {
 	if len(r.pool) == 0 {
 		return "", ""
 	}
-	address = Address{wrap: &r.pool[0], af: r.wrap.rule.af}.String()
+	address = Address{wrap: &r.pool[0].addr, af: r.wrap.rule.af}.String()
 	first := uint(C.rule_proxy_port(&r.wrap.rule, 0))
 	last := uint(C.rule_proxy_port(&r.wrap.rule, 1))
 	switch {
@@ -102,7 +109,12 @@ func (rs RuleSet) addPool(r *Rule, ticket C.u_int32_t) error {
 		pp.ticket = ticket
 		pp.af = C.u_int8_t(r.wrap.rule.af)
 		pp.anchor = rs.wrap.anchor
-		pp.addr.addr = r.pool[i]
+		pp.addr.addr = r.pool[i].addr
+		if r.pool[i].ifname != "" {
+			cs := C.CString(r.pool[i].ifname)
+			C.pool_set_ifname(&pp, cs)
+			C.free(unsafe.Pointer(cs))
+		}
 		if err := rs.tx.handle.ioctl(C.DIOCADDADDR, unsafe.Pointer(&pp)); err != nil {
 			return fmt.Errorf("DIOCADDADDR: %s", err)
 		}
@@ -124,13 +136,13 @@ func (a Anchor) readPool(ticket, index int, rule *Rule) error {
 		return fmt.Errorf("DIOCGETADDRS: %s", err)
 	}
 	n := int(pp.nr)
-	rule.pool = make([]C.struct_pf_addr_wrap, 0, n)
+	rule.pool = make([]poolAddr, 0, n)
 	for i := 0; i < n; i++ {
 		pp.nr = C.u_int32_t(i)
 		if err := a.ioctl(C.DIOCGETADDR, unsafe.Pointer(&pp)); err != nil {
 			return fmt.Errorf("DIOCGETADDR: %s", err)
 		}
-		rule.pool = append(rule.pool, pp.addr.addr)
+		rule.pool = append(rule.pool, poolAddr{addr: pp.addr.addr, ifname: C.GoString(C.pool_ifname(&pp))})
 	}
 	return nil
 }

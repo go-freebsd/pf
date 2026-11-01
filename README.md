@@ -78,7 +78,8 @@ the tests in FreeBSD 14.3 and 15.0 virtual machines.
 * Filter rules (`pass`, `block`/`drop`): action, direction, `log`, `quick`,
   interface or interface group (`on em0`, `on ! em0`: `SetInterface`,
   `SetInterfaceNot`; also for the translation rules; `RuleSet.AddRuleOnInterfaces`
-  adds a rule once per interface, the `on { em0 em1 }` list), address family, protocol, TCP flags (`flags S/SA`, `flags any`:
+  adds a rule once per interface, the `on { em0 em1 }` list), routing (`route-to`, `reply-to`, `dup-to` with one or more
+  `(interface address)` targets: `SetRoute`), address family, protocol, TCP flags (`flags S/SA`, `flags any`:
   `SetTCPFlags`, `ParseTCPFlags`; a rule written with flags 0/0 is `flags any`, pfctl
   itself defaults to `S/SA` for tcp rules that keep state), source and destination address (host, network,
   range, `!`, tables, dynamic interface addresses) with ports and all port
@@ -97,5 +98,5 @@ the tests in FreeBSD 14.3 and 15.0 virtual machines.
 * Transactions, status, debug level, host id (in network byte order, as
   pfctl shows it), limits and timeouts.
 
-Not modelled: `route-to`, `divert`, queues,
+Not modelled: `divert`, queues,
 the routing table, scrub options, and pool options other than the port range.

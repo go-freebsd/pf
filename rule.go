@@ -7,9 +7,16 @@ import "C"
 // Rule wraps the pf rule (cgo)
 type Rule struct {
 	wrap C.struct_pfioc_rule
-	// pool holds the translation addresses of a nat, rdr or binat rule
-	// (the "-> address" of pf.conf); the kernel keeps them apart from the rule
-	pool []C.struct_pf_addr_wrap
+	// pool holds the addresses of the rule's pool: the translation address
+	// of a nat, rdr or binat rule ("-> address") or the targets of route-to,
+	// reply-to and dup-to; the kernel keeps them apart from the rule
+	pool []poolAddr
+}
+
+// poolAddr is one address of a pool, with the interface of a route target
+type poolAddr struct {
+	addr   C.struct_pf_addr_wrap
+	ifname string
 }
 
 // RuleStats contains usefule pf rule statistics

@@ -33,6 +33,10 @@ func (r Rule) String() string {
 		}
 	}
 
+	if rt := r.routeString(); rt != "" {
+		dump = append(dump, rt)
+	}
+
 	if af := r.AddressFamily(); af != AddressFamilyAny {
 		dump = append(dump, r.AddressFamily().String())
 	}

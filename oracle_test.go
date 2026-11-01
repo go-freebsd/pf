@@ -273,6 +273,58 @@ func oracleRuleCases() []ruleCase {
 			}
 			return r.ParseDestination("10.0.0.2", "40704", false)
 		}},
+		{"route-to", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionOut)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetRoute(RouteTo, RouteTarget{Interface: "lo0", Address: "127.0.0.1"}); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40801", false)
+		}},
+		{"reply-to", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionIn)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetRoute(ReplyTo, RouteTarget{Interface: "lo0", Address: "127.0.0.1"}); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40802", false)
+		}},
+		{"dup-to", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionOut)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetRoute(DupTo, RouteTarget{Interface: "lo0", Address: "127.0.0.1"}); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40803", false)
+		}},
+		{"route-to a list", func(r *Rule) error {
+			tcp(r)
+			r.SetDirection(DirectionOut)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.SetRoute(RouteTo, RouteTarget{Interface: "lo0", Address: "127.0.0.1"}, RouteTarget{Interface: "lo0", Address: "127.0.0.2"}); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40804", false)
+		}},
 		{"modulate state", func(r *Rule) error {
 			tcp(r)
 			r.SetAddressFamily(AddressFamilyInet)
@@ -383,6 +435,9 @@ func TestRulesLoadedByPfctl(t *testing.T) {
 		"pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40701 flags SA/FSRPAUEW keep state",
 		"pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40702 flags any keep state",
 		"pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40703 flags S/SAFR no state",
+		"pass out route-to (lo0 127.0.0.1) inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40801 keep state",
+		"pass in reply-to (lo0 127.0.0.1) inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40802 keep state",
+		"pass out route-to { (lo0 127.0.0.1) (lo0 127.0.0.2) } inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40804 keep state",
 	}, "\n") + "\n"
 	pfctl(t, ruleset, "-a", anchor, "-f", "-")
 
@@ -390,7 +445,7 @@ func TestRulesLoadedByPfctl(t *testing.T) {
 	read, err := anchorOf(anchor).Rules()
 	require.NoError(t, err)
 	require.Len(t, read, len(shown), "number of rules")
-	require.Len(t, read, 11)
+	require.Len(t, read, 14)
 
 	for i := range read {
 		t.Logf("pfctl:   %s", shown[i])
@@ -995,4 +1050,23 @@ func TestTCPFlags(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, want, got, in)
 	}
+}
+
+func TestRouteTargets(t *testing.T) {
+	var r Rule
+	assert.Error(t, r.SetRoute(RouteTo), "no target")
+	assert.Error(t, r.SetRoute(RouteTo, RouteTarget{Interface: "lo0"}), "no address")
+	assert.Error(t, r.SetRoute(RouteTo, RouteTarget{Address: "10.0.0.1"}), "no interface")
+	assert.Error(t, r.SetRoute(RouteTo, RouteTarget{Interface: "lo0", Address: "nonsense"}))
+	assert.Error(t, r.SetRoute(RouteNone, RouteTarget{Interface: "lo0", Address: "10.0.0.1"}))
+
+	assert.NoError(t, r.SetRoute(DupTo, RouteTarget{Interface: "lo0", Address: "127.0.0.1"}))
+	kind, targets := r.Route()
+	assert.Equal(t, DupTo, kind)
+	assert.Equal(t, []RouteTarget{{Interface: "lo0", Address: "127.0.0.1/32"}}, targets)
+
+	assert.NoError(t, r.SetRoute(RouteNone))
+	kind, targets = r.Route()
+	assert.Equal(t, RouteNone, kind)
+	assert.Empty(t, targets)
 }

@@ -124,6 +124,7 @@ func (r *Rule) fromNV(n *nv) error {
 		}
 		r.setProxyPorts(uint(ports[0]), uint(ports[1]), uint(num(pool, "opts")))
 	}
+	r.setRouteRaw(RouteType(num(n, "rt")))
 
 	for _, side := range []struct {
 		key string
