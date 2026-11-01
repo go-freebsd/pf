@@ -76,7 +76,7 @@ func (h Handle) Stop() error {
 
 // UpdateStatistics of the packet filter
 func (h Handle) UpdateStatistics(stats *Statistics) error {
-	err := h.ioctl(C.DIOCGETSTATUS, unsafe.Pointer(stats))
+	err := h.status(stats)
 	if err != nil {
 		return fmt.Errorf("DIOCGETSTATUS: %s", err)
 	}

@@ -20,7 +20,11 @@ type Anchor struct {
 // Rules returns all rules using one ticket
 func (a Anchor) Rules() ([]Rule, error) {
 	var rules C.struct_pfioc_rule
-	err := a.ioctl(C.DIOCGETRULES, unsafe.Pointer(&rules))
+	err := cStringCopy(unsafe.Pointer(&rules.anchor), a.Path, int(C.MAXPATHLEN))
+	if err != nil {
+		return nil, err
+	}
+	err = a.ioctl(C.DIOCGETRULES, unsafe.Pointer(&rules))
 	if err != nil {
 		return nil, fmt.Errorf("DIOCGETRULES: %s", err)
 	}
@@ -45,7 +49,5 @@ func (a Anchor) rule(ticket, index int, rule *Rule) error {
 	if rule == nil {
 		panic(fmt.Errorf("Can't store rule data in nil value"))
 	}
-	rule.wrap.nr = C.u_int32_t(index)
-	rule.wrap.ticket = C.u_int32_t(ticket)
-	return a.ioctl(C.DIOCGETRULE, unsafe.Pointer(&rule.wrap))
+	return a.ruleNV(ticket, index, rule)
 }
