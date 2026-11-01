@@ -107,12 +107,9 @@ func normalize(s string) string {
 	s = reHost.ReplaceAllString(s, "")
 	// pfctl shows the number of addresses of a table: <name:3>
 	s = reTable.ReplaceAllString(s, "<$1>")
-	s = strings.ReplaceAll(s, " flags S/SA", "")
 	s = strings.ReplaceAll(s, " inout", "")
-	// attributes the library does not model: the routing table and pfctl's
-	// "flags any" for a rule without TCP flags
+	// the routing table is not modelled
 	s = strings.ReplaceAll(s, " rtable 0", "")
-	s = strings.ReplaceAll(s, " flags any", "")
 	// the way a scrub rule without options is described
 	s = strings.ReplaceAll(s, " fragment reassemble", "")
 	s = strings.Replace(s, "block drop", "drop", 1)
@@ -229,6 +226,53 @@ func oracleRuleCases() []ruleCase {
 			}
 			return r.ParseDestination("10.0.0.2", "40070><40080", false)
 		}},
+		{"tcp flags S/SA", func(r *Rule) error {
+			tcp(r)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.ParseTCPFlags("S/SA"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40701", false)
+		}},
+		{"tcp flags SA/SA and FSRPAUEW mask", func(r *Rule) error {
+			tcp(r)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.ParseTCPFlags("SA/FSRPAUEW"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40702", false)
+		}},
+		{"tcp flags any", func(r *Rule) error {
+			tcp(r)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetState(StateKeep)
+			if err := r.ParseTCPFlags("any"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40703", false)
+		}},
+		{"tcp flags without state", func(r *Rule) error {
+			tcp(r)
+			r.SetAddressFamily(AddressFamilyInet)
+			if err := r.ParseTCPFlags("S/SAFR"); err != nil {
+				return err
+			}
+			if err := r.ParseSource("10.0.0.1", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("10.0.0.2", "40704", false)
+		}},
 		{"modulate state", func(r *Rule) error {
 			tcp(r)
 			r.SetAddressFamily(AddressFamilyInet)
@@ -336,6 +380,9 @@ func TestRulesLoadedByPfctl(t *testing.T) {
 		"pass in on lo0 inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40501 keep state",
 		"pass out quick on ! lo0 inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40502 keep state",
 		"block drop on egress inet6 all",
+		"pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40701 flags SA/FSRPAUEW keep state",
+		"pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40702 flags any keep state",
+		"pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40703 flags S/SAFR no state",
 	}, "\n") + "\n"
 	pfctl(t, ruleset, "-a", anchor, "-f", "-")
 
@@ -343,7 +390,7 @@ func TestRulesLoadedByPfctl(t *testing.T) {
 	read, err := anchorOf(anchor).Rules()
 	require.NoError(t, err)
 	require.Len(t, read, len(shown), "number of rules")
-	require.Len(t, read, 8)
+	require.Len(t, read, 11)
 
 	for i := range read {
 		t.Logf("pfctl:   %s", shown[i])
@@ -921,4 +968,29 @@ func TestInterfaceListLikePfctl(t *testing.T) {
 		require.NoError(t, tx.Rollback())
 		assert.Empty(t, ruleLines(pfctl(t, "", "-a", anchor, "-sr")))
 	})
+}
+
+func TestTCPFlags(t *testing.T) {
+	var r Rule
+	assert.NoError(t, r.ParseTCPFlags("S/SA"))
+	f, m := r.TCPFlags()
+	assert.Equal(t, TCPFlagSYN, f)
+	assert.Equal(t, TCPFlagSYN|TCPFlagACK, m)
+	assert.Equal(t, "SA", m.String())
+	assert.Equal(t, "FSRPAUEW", TCPFlags(0xff).String())
+
+	assert.NoError(t, r.ParseTCPFlags("any"))
+	f, m = r.TCPFlags()
+	assert.Zero(t, f)
+	assert.Zero(t, m)
+
+	for _, bad := range []string{"S", "S/", "X/SA", "SA/S", "S/SAX", ""} {
+		assert.Error(t, r.ParseTCPFlags(bad), bad)
+	}
+	assert.Error(t, r.SetTCPFlags(TCPFlagSYN, TCPFlagACK), "flags that are not in the mask")
+	for in, want := range map[string]TCPFlags{"": 0, "F": 1, "FSRPAUEW": 0xff, "W": 0x80} {
+		got, err := ParseTCPFlags(in)
+		assert.NoError(t, err)
+		assert.Equal(t, want, got, in)
+	}
 }

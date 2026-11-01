@@ -69,8 +69,8 @@ anchors (`go-pf-oracle-*`), so the main ruleset is not touched.
 The comparison ignores differences of notation that carry no meaning: spaces,
 the implicit host prefix (`/32`, `/128`), `port = 22` versus `port 22`, `block
 drop` versus `drop`, the address count pfctl adds to a table (`<t1:3>`), and
-the attributes the library does not model (`flags S/SA`, `flags any`,
-`rtable 0`, a scrub rule's `fragment reassemble`). Continuous integration runs
+the attributes the library does not model (`rtable 0`, a scrub rule's
+`fragment reassemble`). Continuous integration runs
 the tests in FreeBSD 14.3 and 15.0 virtual machines.
 
 # What the library covers
@@ -78,7 +78,9 @@ the tests in FreeBSD 14.3 and 15.0 virtual machines.
 * Filter rules (`pass`, `block`/`drop`): action, direction, `log`, `quick`,
   interface or interface group (`on em0`, `on ! em0`: `SetInterface`,
   `SetInterfaceNot`; also for the translation rules; `RuleSet.AddRuleOnInterfaces`
-  adds a rule once per interface, the `on { em0 em1 }` list), address family, protocol, source and destination address (host, network,
+  adds a rule once per interface, the `on { em0 em1 }` list), address family, protocol, TCP flags (`flags S/SA`, `flags any`:
+  `SetTCPFlags`, `ParseTCPFlags`; a rule written with flags 0/0 is `flags any`, pfctl
+  itself defaults to `S/SA` for tcp rules that keep state), source and destination address (host, network,
   range, `!`, tables, dynamic interface addresses) with ports and all port
   operators, and the state option. `String()` writes `no state` for a pass rule
   that keeps no state, as pfctl does.
@@ -95,5 +97,5 @@ the tests in FreeBSD 14.3 and 15.0 virtual machines.
 * Transactions, status, debug level, host id (in network byte order, as
   pfctl shows it), limits and timeouts.
 
-Not modelled: `route-to`, `divert`, queues, TCP flags,
+Not modelled: `route-to`, `divert`, queues,
 the routing table, scrub options, and pool options other than the port range.

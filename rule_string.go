@@ -47,6 +47,10 @@ func (r Rule) String() string {
 	dump = append(dump, "to")
 	dump = addressDump(dump, &r.wrap.rule.dst, r.wrap.rule.af)
 
+	if f := r.tcpFlagsString(); f != "" {
+		dump = append(dump, f)
+	}
+
 	if addr, ports := r.Redirect(); addr != "" {
 		dump = append(dump, "->", addr)
 		// pfctl leaves out the default port range of a nat rule

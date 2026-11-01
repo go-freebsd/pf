@@ -103,6 +103,8 @@ func (r *Rule) fromNV(n *nv) error {
 	}
 	r.SetInterfaceNot(num(n, "ifnot") != 0)
 
+	r.setTCPFlagsRaw(TCPFlags(num(n, "flags")), TCPFlags(num(n, "flagset")))
+
 	packets, _ := n.numbers("packets")
 	bytes, _ := n.numbers("bytes")
 	for len(packets) < 2 {
