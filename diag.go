@@ -36,3 +36,26 @@ func diagGetAddrs(a Anchor, anchor string) []string {
 	}
 	return out
 }
+
+// diagRuleKeys dumps the keys of the DIOCGETRULENV reply for rule 0.
+func diagRuleKeys(a Anchor, anchor string) []string {
+	var rules C.struct_pfioc_rule
+	ca := C.CString(anchor)
+	defer C.free(unsafe.Pointer(ca))
+	C.strlcpy(&rules.anchor[0], ca, C.MAXPATHLEN)
+	if err := a.ioctl(C.DIOCGETRULES, unsafe.Pointer(&rules)); err != nil {
+		return []string{err.Error()}
+	}
+	req := newNV()
+	defer req.destroy()
+	req.addString("anchor", anchor)
+	req.addNumber("ruleset", uint64(ActionPass))
+	req.addNumber("ticket", uint64(rules.ticket))
+	req.addNumber("nr", 0)
+	reply, err := a.nvIoctl(C.DIOCGETRULENV, req)
+	if err != nil {
+		return []string{err.Error()}
+	}
+	defer reply.destroy()
+	return reply.dump("")
+}

@@ -187,3 +187,25 @@ func (dev *ioctlDev) nvIoctl(cmd uintptr, req *nv) (*nv, error) {
 	}
 	return nil, fmt.Errorf("nv ioctl: reply does not fit")
 }
+
+// dump lists the names and types of the list, children indented; it is for
+// looking at what the kernel sends.
+func (n *nv) dump(indent string) []string {
+	var out []string
+	var cookie unsafe.Pointer
+	for {
+		var typ C.int
+		name := C.nvlist_next(n.p, &typ, &cookie)
+		if name == nil {
+			break
+		}
+		gn := C.GoString(name)
+		out = append(out, fmt.Sprintf("%s%s (type %d)", indent, gn, int(typ)))
+		if int(typ) == C.NV_TYPE_NVLIST {
+			if child, ok := n.child(gn); ok {
+				out = append(out, child.dump(indent+"  ")...)
+			}
+		}
+	}
+	return out
+}
