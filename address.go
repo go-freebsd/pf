@@ -275,6 +275,9 @@ func (a *Address) ParseCIDR(address string) error {
 	} else {
 		var ipn net.IPNet
 		ipn.IP = net.ParseIP(address)
+		if ipn.IP == nil {
+			return fmt.Errorf("invalid IP address %q", address)
+		}
 		if ipn.IP.To4() != nil {
 			ipn.Mask = singleIPv4
 		} else {

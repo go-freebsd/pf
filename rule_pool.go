@@ -73,7 +73,7 @@ func (r *Rule) SetRedirect(address, ports string) error {
 // Redirect returns the translation address of a nat, rdr or binat rule and
 // its port range, or empty strings.
 func (r Rule) Redirect() (address, ports string) {
-	if len(r.pool) == 0 {
+	if len(r.pool) == 0 || !Action(r.wrap.rule.action).translates() {
 		return "", ""
 	}
 	address = Address{wrap: &r.pool[0].addr, af: r.wrap.rule.af}.String()

@@ -1054,6 +1054,7 @@ func TestTCPFlags(t *testing.T) {
 
 func TestRouteTargets(t *testing.T) {
 	var r Rule
+	r.SetAddressFamily(AddressFamilyInet)
 	assert.Error(t, r.SetRoute(RouteTo), "no target")
 	assert.Error(t, r.SetRoute(RouteTo, RouteTarget{Interface: "lo0"}), "no address")
 	assert.Error(t, r.SetRoute(RouteTo, RouteTarget{Address: "10.0.0.1"}), "no interface")
@@ -1069,4 +1070,15 @@ func TestRouteTargets(t *testing.T) {
 	kind, targets = r.Route()
 	assert.Equal(t, RouteNone, kind)
 	assert.Empty(t, targets)
+}
+
+func TestParseCIDRRefusesNonsense(t *testing.T) {
+	var r Rule
+	for _, bad := range []string{"nonsense", "10.0.0", "10.0.0.256", "", "1.2.3.4/33", "::g"} {
+		assert.Error(t, r.ParseSource(bad, "", false), bad)
+		assert.Error(t, r.ParseDestination(bad, "", false), bad)
+	}
+	assert.NoError(t, r.ParseSource("10.0.0.1", "", false))
+	assert.NoError(t, r.ParseSource("10.0.0.0/8", "", false))
+	assert.NoError(t, r.ParseSource("2001:db8::1", "", false))
 }
