@@ -123,7 +123,8 @@ func (h Handle) ClearSourceNodes() error {
 // SetHostID set the host ID, which is used by pfsync to identify
 // which host created state table entries.
 func (h Handle) SetHostID(id uint32) error {
-	hostid := C.u_int32_t(id)
+	// the kernel keeps the id in network byte order, pfctl(8) converts
+	hostid := C.u_int32_t(C.htonl(C.uint32_t(id)))
 	err := h.ioctl(C.DIOCSETHOSTID, unsafe.Pointer(&hostid))
 	if err != nil {
 		return fmt.Errorf("DIOCSETHOSTID : %s", err)

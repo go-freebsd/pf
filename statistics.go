@@ -77,7 +77,7 @@ func (s Statistics) Debug() DebugMode {
 
 // HostID returns the ID of the host
 func (s Statistics) HostID() uint32 {
-	return uint32(s.wrap.hostid)
+	return uint32(C.ntohl(C.uint32_t(s.wrap.hostid)))
 }
 
 // Interface return the name of the interface if any (otherwise empty string)

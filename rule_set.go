@@ -68,6 +68,14 @@ func (rs RuleSet) AddRule(r *Rule) error {
 	// without the anchor the rule goes to the main rule set and fails with
 	// EBUSY (its ticket belongs to the anchor's rule set)
 	r.wrap.anchor = rs.wrap.anchor
+	// every rule needs a fresh pool ticket (pfctl asks for one with
+	// DIOCBEGINADDRS, too). Ticket 0 is only accepted by a kernel on which
+	// nobody has loaded a rule yet.
+	var pool C.struct_pfioc_pooladdr
+	if err := rs.tx.handle.ioctl(C.DIOCBEGINADDRS, unsafe.Pointer(&pool)); err != nil {
+		return fmt.Errorf("DIOCBEGINADDRS: %s", err)
+	}
+	r.wrap.pool_ticket = pool.ticket
 	err := rs.tx.handle.ioctl(C.DIOCADDRULE, unsafe.Pointer(&r.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCADDRULE: %s", err)

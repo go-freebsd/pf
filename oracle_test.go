@@ -95,6 +95,10 @@ func normalize(s string) string {
 	s = strings.ReplaceAll(s, " inout", "")
 	// the library prints nothing for a rule without state, pfctl "no state"
 	s = strings.ReplaceAll(s, " no state", "")
+	// attributes the library does not model: the routing table and pfctl's
+	// "flags any" for a rule without TCP flags
+	s = strings.ReplaceAll(s, " rtable 0", "")
+	s = strings.ReplaceAll(s, " flags any", "")
 	s = strings.Replace(s, "block drop", "drop", 1)
 	s = strings.Replace(s, "block", "drop", 1)
 	s = strings.ReplaceAll(s, " all", " from any to any")
