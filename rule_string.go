@@ -49,6 +49,9 @@ func (r Rule) String() string {
 
 	if s := r.State(); s != StateNo {
 		dump = append(dump, s.String())
+	} else if a := r.Action(); a == ActionPass || a == ActionDrop {
+		// like pfctl: a filter rule that keeps no state says so
+		dump = append(dump, "no state")
 	}
 
 	return strings.Join(dump, " ")

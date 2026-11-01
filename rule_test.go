@@ -8,7 +8,7 @@ import (
 
 func TestEmptyRuleString(t *testing.T) {
 	var rule Rule
-	assert.Equal(t, "pass inout from any to any", rule.String())
+	assert.Equal(t, "pass inout from any to any no state", rule.String())
 	assert.False(t, rule.Log())
 	assert.False(t, rule.Quick())
 	assert.Equal(t, ProtocolAny, rule.Protocol())
@@ -22,35 +22,35 @@ func TestParsing(t *testing.T) {
 			"10",
 			"10.0.0.255",
 			"!=10",
-			"pass inout inet from 10.0.0.1/32 port 10 to 10.0.0.255/32 port !=10",
+			"pass inout inet from 10.0.0.1/32 port 10 to 10.0.0.255/32 port !=10 no state",
 		},
 		[]string{
 			"10.0.0.1/0",
 			">10",
 			"10.0.1.255/24",
 			"<10",
-			"pass inout inet from any port >10 to 10.0.1.0/24 port <10",
+			"pass inout inet from any port >10 to 10.0.1.0/24 port <10 no state",
 		},
 		[]string{
 			"10.0.0.1",
 			">=10",
 			"10.0.0.255",
 			"<=10",
-			"pass inout inet from 10.0.0.1/32 port >=10 to 10.0.0.255/32 port <=10",
+			"pass inout inet from 10.0.0.1/32 port >=10 to 10.0.0.255/32 port <=10 no state",
 		},
 		[]string{
 			"::1",
 			"1<>10",
 			"2002::1",
 			"10><100",
-			"pass inout inet6 from ::1/128 port 1<>10 to 2002::1/128 port 10><100",
+			"pass inout inet6 from ::1/128 port 1<>10 to 2002::1/128 port 10><100 no state",
 		},
 		[]string{
 			"2001::1/64",
 			"1<>10",
 			"2002::1/64",
 			"10><100",
-			"pass inout inet6 from 2001::/64 port 1<>10 to 2002::/64 port 10><100",
+			"pass inout inet6 from 2001::/64 port 1<>10 to 2002::/64 port 10><100 no state",
 		},
 	}
 
@@ -87,5 +87,5 @@ func TestNegativeRules(t *testing.T) {
 	var rule Rule
 	assert.NoError(t, rule.ParseSource("10.0.1.1", "10", true))
 	assert.NoError(t, rule.ParseDestination("10.0.2.1", "10", true))
-	assert.Equal(t, "pass inout inet from ! 10.0.1.1/32 port 10 to ! 10.0.2.1/32 port 10", rule.String())
+	assert.Equal(t, "pass inout inet from ! 10.0.1.1/32 port 10 to ! 10.0.2.1/32 port 10 no state", rule.String())
 }
