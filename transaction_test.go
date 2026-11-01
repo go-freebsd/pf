@@ -19,19 +19,25 @@ func TestRuleSetRollback(t *testing.T) {
 	assert.Equal(t, RuleSetScrub, frs.Type())
 	frs.SetType(RuleSetFilter)
 	assert.Equal(t, "", frs.Anchor())
-	assert.NoError(t, frs.SetAnchor("/asd"))
-	assert.Equal(t, "/asd", frs.Anchor())
+	assert.NoError(t, frs.SetAnchor("go-pf-rollback"))
+	assert.Equal(t, "go-pf-rollback", frs.Anchor())
 
 	err = tx.Begin()
 	assert.NoError(t, err)
 
+	// the rule is added to the anchor of the rule set (it used to land in
+	// the main rule set and fail), and rolling back drops it again
 	err = frs.AddRule(&rule)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 
 	err = tx.Rollback()
 	assert.NoError(t, err)
 
 	rules, err := pfh.Rules()
+	assert.NoError(t, err)
+	assert.Len(t, rules, 0)
+
+	rules, err = anchorOf("go-pf-rollback").Rules()
 	assert.NoError(t, err)
 	assert.Len(t, rules, 0)
 }
