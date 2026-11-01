@@ -68,6 +68,7 @@ func (rs RuleSet) AddRule(r *Rule) error {
 	// without the anchor the rule goes to the main rule set and fails with
 	// EBUSY (its ticket belongs to the anchor's rule set)
 	r.wrap.anchor = rs.wrap.anchor
+	r.applyRTable()
 	// every rule needs a fresh pool ticket (pfctl asks for one with
 	// DIOCBEGINADDRS, too). Ticket 0 is only accepted by a kernel on which
 	// nobody has loaded a rule yet.

@@ -11,6 +11,9 @@ type Rule struct {
 	// of a nat, rdr or binat rule ("-> address") or the targets of route-to,
 	// reply-to and dup-to; the kernel keeps them apart from the rule
 	pool []poolAddr
+	// rtable is the routing table plus one; 0 for a rule without one, which
+	// the kernel is told as -1
+	rtable int32
 }
 
 // poolAddr is one address of a pool, with the interface of a route target

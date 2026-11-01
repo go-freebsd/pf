@@ -125,6 +125,8 @@ func (r *Rule) fromNV(n *nv) error {
 		r.setProxyPorts(uint(ports[0]), uint(ports[1]), uint(num(pool, "opts")))
 	}
 	r.setRouteRaw(RouteType(num(n, "rt")))
+	r.setScrubRaw(num(n, "rule_flag"), num(n, "scrub_flags"), num(n, "min_ttl"), num(n, "max_mss"))
+	r.setRTableRaw(int64(num(n, "rtableid")))
 
 	for _, side := range []struct {
 		key string

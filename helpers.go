@@ -2,6 +2,7 @@ package pf
 
 import (
 	"fmt"
+	"strconv"
 	"unsafe"
 )
 
@@ -22,3 +23,5 @@ func cStringCopy(dst unsafe.Pointer, src string, size int) error {
 	}
 	return nil
 }
+
+func itoa(n int) string { return strconv.Itoa(n) }

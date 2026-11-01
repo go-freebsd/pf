@@ -68,10 +68,10 @@ anchors (`go-pf-oracle-*`), so the main ruleset is not touched.
 
 The comparison ignores differences of notation that carry no meaning: spaces,
 the implicit host prefix (`/32`, `/128`), `port = 22` versus `port 22`, `block
-drop` versus `drop`, the address count pfctl adds to a table (`<t1:3>`), and
-the attributes the library does not model (`rtable 0`, a scrub rule's
-`fragment reassemble`). Continuous integration runs
-the tests in FreeBSD 14.3 and 15.0 virtual machines.
+drop` versus `drop`, and the address count pfctl adds to a table (`<t1:3>`).
+Everything else, `flags`, `rtable`, `fragment reassemble` included, has to be
+the same. Continuous integration runs the tests in FreeBSD 14.3 and 15.0
+virtual machines.
 
 # FreeBSD 15 and the targets of route-to
 
@@ -100,7 +100,8 @@ pfctl accounts for that.
   range; a nat rule without ports gets the dynamic range 50001:65535, as with
   pfctl. `Anchor.RulesOf(type)` reads the rules of one rule set type; `Rules()`
   reads the filter rules.
-* Scrub rules, without their options (`fragment reassemble` is the default).
+* Scrub rules with `no-df`, `min-ttl`, `max-mss`, `random-id` and `reassemble tcp` (`SetScrub`); fragments are reassembled, the `fragment reassemble` pfctl prints.
+* The routing table of a rule (`SetRTable`, `rtable N`). A rule without it leaves the routing table alone (the kernel is told -1, as pfctl does); this is not the same as `rtable 0`.
 * Tables: `CreateTable`, `DeleteTable`, `Tables`, `AddTableAddresses` and
   `TableAddresses` on a `Handle`, and `Address.SetTableName` to refer to one.
 * Anchors: rule sets and rules in an anchor (`Anchor{Path: ...}`), nested
@@ -108,5 +109,4 @@ pfctl accounts for that.
 * Transactions, status, debug level, host id (in network byte order, as
   pfctl shows it), limits and timeouts.
 
-Not modelled: `divert`, queues,
-the routing table, scrub options, and pool options other than the port range.
+Not modelled: `divert`, queues, and pool options other than the port range.

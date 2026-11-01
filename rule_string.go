@@ -55,6 +55,15 @@ func (r Rule) String() string {
 		dump = append(dump, f)
 	}
 
+	if s := r.scrubString(); s != "" {
+		dump = append(dump, s)
+	}
+
+	translates := Action(r.wrap.rule.action).translates()
+	if rt := r.rtableString(); rt != "" && translates {
+		dump = append(dump, rt)
+	}
+
 	if addr, ports := r.Redirect(); addr != "" {
 		dump = append(dump, "->", addr)
 		// pfctl leaves out the default port range of a nat rule
@@ -69,6 +78,10 @@ func (r Rule) String() string {
 		// like pfctl: a pass rule that keeps no state says so (a block
 		// rule never does)
 		dump = append(dump, "no state")
+	}
+
+	if rt := r.rtableString(); rt != "" && !translates {
+		dump = append(dump, rt)
 	}
 
 	return strings.Join(dump, " ")
