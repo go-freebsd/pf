@@ -7,7 +7,7 @@ import (
 	"github.com/go-freebsd/pf"
 )
 
-func ExampleStats() {
+func ExampleRule_Stats() {
 	pfh, err := pf.Open()
 	if err != nil {
 		log.Fatal(err)

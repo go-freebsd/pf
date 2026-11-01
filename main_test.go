@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 	if ok, _ := kld.Loaded("pf"); !ok {
 		err := kld.Load("pf")
 		if err != nil {
-			log.Fatalf("Unable to load pf kernel module", err)
+			log.Fatalf("Unable to load pf kernel module: %s", err)
 		}
 	}
 
