@@ -76,6 +76,9 @@ func (rs RuleSet) AddRule(r *Rule) error {
 		return fmt.Errorf("DIOCBEGINADDRS: %s", err)
 	}
 	r.wrap.pool_ticket = pool.ticket
+	if err := rs.addPool(r, pool.ticket); err != nil {
+		return err
+	}
 	err := rs.tx.handle.ioctl(C.DIOCADDRULE, unsafe.Pointer(&r.wrap))
 	if err != nil {
 		return fmt.Errorf("DIOCADDRULE: %s", err)

@@ -7,6 +7,9 @@ import "C"
 // Rule wraps the pf rule (cgo)
 type Rule struct {
 	wrap C.struct_pfioc_rule
+	// pool holds the translation addresses of a nat, rdr or binat rule
+	// (the "-> address" of pf.conf); the kernel keeps them apart from the rule
+	pool []C.struct_pf_addr_wrap
 }
 
 // RuleStats contains usefule pf rule statistics

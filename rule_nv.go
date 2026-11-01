@@ -58,11 +58,11 @@ import "C"
 // ruleNV reads one rule with DIOCGETRULENV. FreeBSD 15 dropped the struct
 // based DIOCGETRULE; DIOCGETRULENV exists since FreeBSD 13/14. The reply
 // is translated into the struct the rest of the package uses.
-func (a Anchor) ruleNV(ticket, index int, rule *Rule) error {
+func (a Anchor) ruleNV(t RuleSetType, ticket, index int, rule *Rule) error {
 	req := newNV()
 	defer req.destroy()
 	req.addString("anchor", a.Path)
-	req.addNumber("ruleset", C.PF_RULESET_FILTER)
+	req.addNumber("ruleset", uint64(t))
 	req.addNumber("ticket", uint64(ticket))
 	req.addNumber("nr", uint64(index))
 
@@ -104,6 +104,14 @@ func (r *Rule) fromNV(n *nv) error {
 	C.rule_set_counters(&r.wrap.rule, C.uint64_t(num(n, "evaluations")),
 		C.uint64_t(packets[0]), C.uint64_t(packets[1]),
 		C.uint64_t(bytes[0]), C.uint64_t(bytes[1]))
+
+	if pool, ok := n.child("rpool"); ok {
+		ports, _ := pool.numbers("proxy_port")
+		for len(ports) < 2 {
+			ports = append(ports, 0)
+		}
+		r.setProxyPorts(uint(ports[0]), uint(ports[1]), uint(num(pool, "opts")))
+	}
 
 	for _, side := range []struct {
 		key string

@@ -59,9 +59,15 @@ func anchorOf(path string) Anchor {
 // commitRules replaces the filter rules of the anchor with the given rules.
 func commitRules(t *testing.T, anchor string, rules ...*Rule) {
 	t.Helper()
+	commitRulesOf(t, anchor, RuleSetFilter, rules...)
+}
+
+// commitRulesOf replaces the rules of one type of the anchor.
+func commitRulesOf(t *testing.T, anchor string, typ RuleSetType, rules ...*Rule) {
+	t.Helper()
 	tx := pfh.NewTransaction(1)
 	rs := tx.RuleSet(0)
-	rs.SetType(RuleSetFilter)
+	rs.SetType(typ)
 	require.NoError(t, rs.SetAnchor(anchor))
 	require.NoError(t, tx.Begin())
 	committed := false
@@ -481,4 +487,135 @@ func TestRuleStatsLikePfctl(t *testing.T) {
 	read[0].Stats(&s)
 	assert.Equal(t, RuleStats{}, s)
 	assert.Regexp(t, `Evaluations: 0\s+Packets: 0\s+Bytes: 0`, pfctl(t, "", "-a", anchor, "-vsr"))
+}
+
+// translationCases are the rules with a translation address: nat, rdr and
+// binat, and the "no" forms that exempt traffic from them.
+func translationCases() []struct {
+	name  string
+	typ   RuleSetType
+	build func(r *Rule) error
+} {
+	return []struct {
+		name  string
+		typ   RuleSetType
+		build func(r *Rule) error
+	}{
+		{"nat", RuleSetNAT, func(r *Rule) error {
+			r.SetAction(ActionNAT)
+			r.SetAddressFamily(AddressFamilyInet)
+			if err := r.ParseSource("10.0.0.0/24", "", false); err != nil {
+				return err
+			}
+			if err := r.ParseDestination("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.SetRedirect("192.0.2.1", "")
+		}},
+		{"no nat", RuleSetNAT, func(r *Rule) error {
+			r.SetAction(ActionNoNAT)
+			r.SetAddressFamily(AddressFamilyInet)
+			if err := r.ParseSource("10.1.0.0/24", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("0.0.0.0/0", "", false)
+		}},
+		{"rdr", RuleSetRedirect, func(r *Rule) error {
+			r.SetAction(ActionRDR)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetProtocol(ProtocolTCP)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			if err := r.ParseDestination("192.0.2.1", "40001", false); err != nil {
+				return err
+			}
+			return r.SetRedirect("10.0.0.5", "40002")
+		}},
+		{"rdr port range", RuleSetRedirect, func(r *Rule) error {
+			r.SetAction(ActionRDR)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetProtocol(ProtocolTCP)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			if err := r.ParseDestination("192.0.2.1", "40010:40019", false); err != nil {
+				return err
+			}
+			return r.SetRedirect("10.0.0.5", "40100:40109")
+		}},
+		{"no rdr", RuleSetRedirect, func(r *Rule) error {
+			r.SetAction(ActionNoRDR)
+			r.SetAddressFamily(AddressFamilyInet)
+			r.SetProtocol(ProtocolTCP)
+			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.ParseDestination("192.0.2.9", "40003", false)
+		}},
+		{"binat", RuleSetBINAT, func(r *Rule) error {
+			r.SetAction(ActionBINAT)
+			r.SetAddressFamily(AddressFamilyInet)
+			if err := r.ParseSource("10.0.0.9", "", false); err != nil {
+				return err
+			}
+			if err := r.ParseDestination("0.0.0.0/0", "", false); err != nil {
+				return err
+			}
+			return r.SetRedirect("192.0.2.9", "")
+		}},
+	}
+}
+
+// TestTranslationRulesLikePfctl writes nat, rdr and binat rules with the
+// library; pfctl -sn must show them as the library describes them, and the
+// library reads them back unchanged, translation address included.
+func TestTranslationRulesLikePfctl(t *testing.T) {
+	for _, tc := range translationCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			anchor := oracleAnchor(t, "tr-"+strings.ReplaceAll(tc.name, " ", "-"))
+			var r Rule
+			require.NoError(t, tc.build(&r))
+			commitRulesOf(t, anchor, tc.typ, &r)
+
+			shown := ruleLines(pfctl(t, "", "-a", anchor, "-sn"))
+			require.Len(t, shown, 1, "pfctl output: %v", shown)
+			back, err := anchorOf(anchor).RulesOf(tc.typ)
+			require.NoError(t, err)
+			require.Len(t, back, 1)
+
+			t.Logf("library:  %s", r.String())
+			t.Logf("readback: %s", back[0].String())
+			t.Logf("pfctl:    %s", shown[0])
+			assert.Equal(t, normalize(shown[0]), normalize(r.String()), "pfctl vs rule written")
+			assert.Equal(t, r.String(), back[0].String(), "rule written vs rule read back")
+		})
+	}
+}
+
+// TestTranslationRulesLoadedByPfctl loads the rules with pfctl and reads
+// them with the library, type by type.
+func TestTranslationRulesLoadedByPfctl(t *testing.T) {
+	anchor := oracleAnchor(t, "tr-read")
+	pfctl(t, strings.Join([]string{
+		"nat inet from 10.0.0.0/24 to any -> 192.0.2.1",
+		"no nat inet from 10.1.0.0/24 to any",
+		"rdr inet proto tcp from any to 192.0.2.1 port 40001 -> 10.0.0.5 port 40002",
+		"no rdr inet proto tcp from any to 192.0.2.9 port 40003",
+		"binat inet from 10.0.0.9 to any -> 192.0.2.9",
+	}, "\n")+"\n", "-a", anchor, "-f", "-")
+
+	shown := ruleLines(pfctl(t, "", "-a", anchor, "-sn"))
+	var read []Rule
+	for _, typ := range []RuleSetType{RuleSetNAT, RuleSetRedirect, RuleSetBINAT} {
+		rules, err := anchorOf(anchor).RulesOf(typ)
+		require.NoError(t, err)
+		read = append(read, rules...)
+	}
+	require.Len(t, read, len(shown), "number of rules")
+	for i := range read {
+		t.Logf("pfctl:   %s", shown[i])
+		t.Logf("library: %s", read[i].String())
+		assert.Equal(t, normalize(shown[i]), normalize(read[i].String()), "rule %d", i)
+	}
 }

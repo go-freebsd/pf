@@ -17,9 +17,29 @@ type Anchor struct {
 	Path string
 }
 
-// Rules returns all rules using one ticket
+// Rules returns all filter rules using one ticket
 func (a Anchor) Rules() ([]Rule, error) {
+	return a.RulesOf(RuleSetFilter)
+}
+
+// rulesetAction is an action that selects the rule set of the type
+var rulesetAction = map[RuleSetType]Action{
+	RuleSetScrub:    ActionScrub,
+	RuleSetFilter:   ActionPass,
+	RuleSetNAT:      ActionNAT,
+	RuleSetBINAT:    ActionBINAT,
+	RuleSetRedirect: ActionRDR,
+}
+
+// RulesOf returns all rules of one type (filter, scrub, nat, binat or rdr)
+// using one ticket
+func (a Anchor) RulesOf(t RuleSetType) ([]Rule, error) {
+	action, ok := rulesetAction[t]
+	if !ok {
+		return nil, fmt.Errorf("rules of rule set type %d can't be read", int(t))
+	}
 	var rules C.struct_pfioc_rule
+	rules.rule.action = C.u_int8_t(action)
 	err := cStringCopy(unsafe.Pointer(&rules.anchor), a.Path, int(C.MAXPATHLEN))
 	if err != nil {
 		return nil, err
@@ -31,7 +51,7 @@ func (a Anchor) Rules() ([]Rule, error) {
 	ruleList := make([]Rule, rules.nr)
 
 	for i := 0; i < int(rules.nr); i++ {
-		err = a.rule(int(rules.ticket), i, &ruleList[i])
+		err = a.ruleOf(t, int(rules.ticket), i, &ruleList[i])
 		if err != nil {
 			return nil, fmt.Errorf("DIOCGETRULE: %s", err)
 		}
@@ -42,6 +62,11 @@ func (a Anchor) Rules() ([]Rule, error) {
 
 // Rule uses the passed ticket to return the rule at the given index
 func (a Anchor) rule(ticket, index int, rule *Rule) error {
+	return a.ruleOf(RuleSetFilter, ticket, index, rule)
+}
+
+// ruleOf is rule for the rule set of the given type
+func (a Anchor) ruleOf(t RuleSetType, ticket, index int, rule *Rule) error {
 	if ticket <= 0 || index < 0 {
 		return fmt.Errorf("Invalid ticket or index: ticket %d index %d",
 			ticket, index)
@@ -49,5 +74,11 @@ func (a Anchor) rule(ticket, index int, rule *Rule) error {
 	if rule == nil {
 		panic(fmt.Errorf("Can't store rule data in nil value"))
 	}
-	return a.ruleNV(ticket, index, rule)
+	if err := a.ruleNV(t, ticket, index, rule); err != nil {
+		return err
+	}
+	if Action(rule.wrap.rule.action).translates() {
+		return a.readPool(ticket, index, rule)
+	}
+	return nil
 }

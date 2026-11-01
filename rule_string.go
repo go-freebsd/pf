@@ -39,6 +39,13 @@ func (r Rule) String() string {
 	dump = append(dump, "to")
 	dump = addressDump(dump, &r.wrap.rule.dst, r.wrap.rule.af)
 
+	if addr, ports := r.Redirect(); addr != "" {
+		dump = append(dump, "->", addr)
+		if ports != "" {
+			dump = append(dump, "port", ports)
+		}
+	}
+
 	if s := r.State(); s != StateNo {
 		dump = append(dump, s.String())
 	}
