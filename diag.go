@@ -2,14 +2,47 @@ package pf
 
 import (
 	"fmt"
+	"os"
 	"unsafe"
 )
 
+type os_File = os.File
+
+// #cgo LDFLAGS: -lpfctl
 // #include <string.h>
 // #include <stdlib.h>
+// #include <errno.h>
+// #include <sys/param.h>
+// #include <sys/types.h>
+// #include <sys/socket.h>
 // #include <sys/ioctl.h>
+// #include <netinet/in.h>
 // #include <net/if.h>
 // #include <net/pfvar.h>
+// #include <libpfctl.h>
+/*
+static int diag_route(int dev, const char *anchor, unsigned ruleset, unsigned ticket, unsigned nr, char *out, int outlen) {
+#if __FreeBSD_version >= 1500000
+	struct pfctl_rule rule;
+	char anchor_call[MAXPATHLEN];
+	memset(&rule, 0, sizeof(rule));
+	int err = pfctl_get_rule(dev, nr, ticket, anchor, ruleset, &rule, anchor_call);
+	if (err) { snprintf(out, outlen, "pfctl_get_rule: %d", err); return -1; }
+	int n = 0;
+	struct pfctl_pooladdr *pa;
+	int off = 0;
+	TAILQ_FOREACH(pa, &rule.route.list, entries) {
+		off += snprintf(out + off, outlen - off, "[%s type=%d] ", pa->ifname, pa->addr.type);
+		n++;
+	}
+	snprintf(out + off, outlen - off, "rt=%d", rule.rt);
+	return n;
+#else
+	snprintf(out, outlen, "not 15");
+	return -2;
+#endif
+}
+*/
 import "C"
 
 // diagGetAddrs is a temporary diagnosis, removed again.
@@ -58,4 +91,22 @@ func diagRuleKeys(a Anchor, anchor string) []string {
 	}
 	defer reply.destroy()
 	return reply.dump("")
+}
+
+func diagLibpfctl(a Anchor, anchor string) []string {
+	var rules C.struct_pfioc_rule
+	ca := C.CString(anchor)
+	defer C.free(unsafe.Pointer(ca))
+	C.strlcpy(&rules.anchor[0], ca, C.MAXPATHLEN)
+	if err := a.ioctl(C.DIOCGETRULES, unsafe.Pointer(&rules)); err != nil {
+		return []string{err.Error()}
+	}
+	var out []string
+	for _, rs := range []uint{0, 1, 4} { // pass action, rule set index filter, drop?
+		buf := (*C.char)(C.malloc(512))
+		n := C.diag_route(C.int((*os_File)(a.ioctlDev).Fd()), ca, C.uint(rs), C.uint(rules.ticket), 0, buf, 512)
+		out = append(out, fmt.Sprintf("pfctl_get_rule ruleset=%d -> %d %s", rs, int(n), C.GoString(buf)))
+		C.free(unsafe.Pointer(buf))
+	}
+	return out
 }

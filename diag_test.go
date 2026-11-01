@@ -12,8 +12,8 @@ func TestRouteDiag(t *testing.T) {
 	pfctl(t, "pass out route-to (lo0 127.0.0.1) inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40801 keep state\n", "-a", theirs, "-f", "-")
 	t.Logf("pfctl -sr -vv:\n%s", pfctl(t, "", "-a", theirs, "-sr", "-vv"))
 	probe("pfctl-loaded", theirs)
-	for _, l := range diagRuleKeys(anchorOf(theirs), theirs) {
-		t.Logf("keys: %s", l)
+	for _, l := range diagLibpfctl(anchorOf(theirs), theirs) {
+		t.Logf("libpfctl: %s", l)
 	}
 
 	mine := oracleAnchor(t, "diag-mine")

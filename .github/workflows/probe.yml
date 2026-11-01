@@ -27,5 +27,5 @@ jobs:
             go test -count=1 -run 'TestRouteDiag' -v . > probe.log 2>&1
             exit 0
       - run: |
-          msg=$(grep -v '^=== ' probe.log | grep -v 'GETADDRS' | head -n 140 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          msg=$(grep -v '^=== ' probe.log | grep -E 'libpfctl|FAIL|error|undefined|\\.go' | head -n 60 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
           echo "::notice title=probe ${{ matrix.release }}::$msg"
