@@ -1,0 +1,45 @@
+name: Probe
+
+on:
+  push:
+
+jobs:
+  probe:
+    name: Probe ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["14.3", "15.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ matrix.release }}
+          usesh: true
+          copyback: true
+          run: |
+            set +e
+            cd "$GITHUB_WORKSPACE"
+            {
+              uname -sr
+              kldload pf 2>&1
+              echo "--- ioctl defines"
+              grep -nE 'define[[:space:]]+DIOC(GETRULE|GETRULES|GETRULENV|ADDRULE|ADDRULENV|GETSTATUS|GETSTATUSNV|START|STOP|XBEGIN)[[:space:]]' /usr/include/net/pfvar.h
+              echo "--- struct pfioc_nv / pf_status"
+              grep -rnE 'struct[[:space:]]+(pfioc_nv|pf_status)[[:space:]]*\{' /usr/include/net/ /usr/include/netpfil 2>/dev/null
+              grep -n -A8 'struct[[:space:]]*pfioc_nv[[:space:]]*{' /usr/include/net/*.h | head -n 12
+              echo "--- libnv"
+              ls /usr/include/sys/nv.h /lib/libnv.so* /usr/lib/libnv.so* 2>&1
+              echo "--- pfctl"
+              printf 'pass in quick on lo0 inet proto tcp from 10.0.0.0/8 port > 1024 to any port 22 keep state\nblock drop out log from any to <t1>\n' > /tmp/r.conf
+              pfctl -a probe -f /tmp/r.conf 2>&1
+              pfctl -a probe -sr -vv 2>&1
+              pfctl -si -v 2>&1
+              pfctl -sm 2>&1
+              pfctl -st 2>&1
+            } > probe.log 2>&1
+            exit 0
+      - run: |
+          msg=$(sed -e 's/%/%25/g' probe.log | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=probe ${{ matrix.release }}::$msg"
