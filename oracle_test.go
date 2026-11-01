@@ -464,9 +464,14 @@ func TestRulesLikePfctl(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, back, 1)
 
-			t.Logf("library:  %s", r.String())
-			t.Logf("readback: %s", back[0].String())
-			t.Logf("pfctl:    %s", shown[0])
+			// the lines are only worth reading when the case fails
+			t.Cleanup(func() {
+				if t.Failed() {
+					t.Logf("library:  %s", r.String())
+					t.Logf("readback: %s", back[0].String())
+					t.Logf("pfctl:    %s", shown[0])
+				}
+			})
 			assert.Equal(t, normalize(shown[0]), normalize(r.String()), "pfctl vs rule written")
 			assert.Equal(t, routeless(r.String()), routeless(back[0].String()), "rule written vs rule read back")
 		})
