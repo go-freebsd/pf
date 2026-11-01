@@ -44,8 +44,30 @@ Working with pf directly on a remote connection can cause you to loose
 the connection in case of a programming error. Make sure you have a
 second way to access the system e.g. a serial console.
 
+# Supported releases
+
+The library is tested on FreeBSD 14.3 and 15.0 (amd64). FreeBSD 15 removed
+the struct based `DIOCGETRULE` and `DIOCGETSTATUS` ioctls; the rules and the
+status are therefore read with their nvlist variants (`DIOCGETRULENV`,
+`DIOCGETSTATUSNV`, through libnv), which exist on 14 and 15. The older
+releases listed in the badges above are no longer exercised.
+
 # Testing
 
 You need to be root to execute the tests.
 
 	make test
+
+The tests do not only check the library against itself: `oracle_test.go`
+compares it with `pfctl(8)`. Rules written by the library must be shown by
+`pfctl -sr` as the library describes them and are read back unchanged. Rules
+loaded with `pfctl -f` must be read in order by the library. The status, the
+debug level, the host id, the limits and the timeouts set through the library
+must be the values `pfctl -si/-sm/-st` report. Everything happens in scratch
+anchors (`go-pf-oracle-*`), so the main ruleset is not touched.
+
+The comparison ignores differences of notation that carry no meaning: spaces,
+the implicit host prefix (`/32`, `/128`), `port = 22` versus `port 22`, `block
+drop` versus `drop`, an explicit `no state`, and the attributes the library
+does not model (`flags S/SA`, `flags any`, `rtable 0`). Continuous
+integration runs the tests in FreeBSD 14.3 and 15.0 virtual machines.
