@@ -127,6 +127,15 @@ func (r *Rule) fromNV(n *nv) error {
 	r.setRouteRaw(RouteType(num(n, "rt")))
 	r.setScrubRaw(num(n, "rule_flag"), num(n, "scrub_flags"), num(n, "min_ttl"), num(n, "max_mss"))
 	r.setRTableRaw(int64(num(n, "rtableid")))
+	if d, ok := n.child("divert"); ok {
+		var addr []byte
+		if c, ok := d.child("addr"); ok {
+			addr, _ = c.binary("addr")
+		} else {
+			addr, _ = d.binary("addr")
+		}
+		r.setDivertRaw(addr, num(d, "port"))
+	}
 
 	for _, side := range []struct {
 		key string

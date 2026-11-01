@@ -80,6 +80,10 @@ func (r Rule) String() string {
 		dump = append(dump, "no state")
 	}
 
+	if d := r.divertString(); d != "" {
+		dump = append(dump, d)
+	}
+
 	if rt := r.rtableString(); rt != "" && !translates {
 		dump = append(dump, rt)
 	}
