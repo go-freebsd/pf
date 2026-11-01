@@ -910,6 +910,8 @@ func TestInterfaceListLikePfctl(t *testing.T) {
 		r.SetProtocol(ProtocolTCP)
 		r.SetAddressFamily(AddressFamilyInet)
 		r.SetState(StateKeep)
+		// what pfctl makes of a tcp rule that keeps state and has no flags
+		require.NoError(t, r.ParseTCPFlags("S/SA"))
 		require.NoError(t, r.ParseSource("10.0.0.1", "", false))
 		require.NoError(t, r.ParseDestination("10.0.0.2", "40601", false))
 		commitRulesOn(t, mine, RuleSetFilter, list, &r)
