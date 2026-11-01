@@ -68,6 +68,30 @@ anchors (`go-pf-oracle-*`), so the main ruleset is not touched.
 
 The comparison ignores differences of notation that carry no meaning: spaces,
 the implicit host prefix (`/32`, `/128`), `port = 22` versus `port 22`, `block
-drop` versus `drop`, an explicit `no state`, and the attributes the library
-does not model (`flags S/SA`, `flags any`, `rtable 0`). Continuous
-integration runs the tests in FreeBSD 14.3 and 15.0 virtual machines.
+drop` versus `drop`, the address count pfctl adds to a table (`<t1:3>`), and
+the attributes the library does not model (`flags S/SA`, `flags any`,
+`rtable 0`, a scrub rule's `fragment reassemble`). Continuous integration runs
+the tests in FreeBSD 14.3 and 15.0 virtual machines.
+
+# What the library covers
+
+* Filter rules (`pass`, `block`/`drop`): action, direction, `log`, `quick`,
+  address family, protocol, source and destination address (host, network,
+  range, `!`, tables, dynamic interface addresses) with ports and all port
+  operators, and the state option. `String()` writes `no state` for a pass rule
+  that keeps no state, as pfctl does.
+* Translation rules: `nat`, `rdr` and `binat` with their `no` forms.
+  `Rule.SetRedirect(address, ports)` sets the address after `->` and the port
+  range; a nat rule without ports gets the dynamic range 50001:65535, as with
+  pfctl. `Anchor.RulesOf(type)` reads the rules of one rule set type; `Rules()`
+  reads the filter rules.
+* Scrub rules, without their options (`fragment reassemble` is the default).
+* Tables: `CreateTable`, `DeleteTable`, `Tables`, `AddTableAddresses` and
+  `TableAddresses` on a `Handle`, and `Address.SetTableName` to refer to one.
+* Anchors: rule sets and rules in an anchor (`Anchor{Path: ...}`), nested
+  anchors with `Anchor.Anchors()`.
+* Transactions, status, debug level, host id (in network byte order, as
+  pfctl shows it), limits and timeouts.
+
+Not modelled: interfaces (`on em0`), `route-to`, `divert`, queues, TCP flags,
+the routing table, scrub options, and pool options other than the port range.

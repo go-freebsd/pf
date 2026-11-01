@@ -22,18 +22,28 @@ jobs:
           if [ -n "$out" ]; then echo "::error::gofmt needed:"; echo "$out"; exit 1; fi
 
   freebsd:
-    name: FreeBSD ${{ matrix.release }} (real pf)
+    name: FreeBSD ${{ matrix.release }} ${{ matrix.arch }} (real pf)
     runs-on: ubuntu-latest
+    # The arm64 VM is emulated and slow: it may fail or time out without
+    # failing the workflow; amd64 is the gate.
+    continue-on-error: ${{ matrix.experimental == true }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         release: ["14.3", "15.0"]
+        arch: ["x86_64"]
+        include:
+          - release: "14.3"
+            arch: "aarch64"
+            experimental: true
     steps:
       - uses: actions/checkout@v4
       - name: Test in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
           release: ${{ matrix.release }}
+          arch: ${{ matrix.arch }}
           usesh: true
           copyback: true
           prepare: |
@@ -69,16 +79,16 @@ jobs:
           fi
           # Job logs cannot always be downloaded; annotations can be read through the API.
           grep -E '^(--- FAIL|FAIL|panic:)' test.log | head -n 10 | while IFS= read -r line; do
-            echo "::error title=FreeBSD ${{ matrix.release }}::$line"
+            echo "::error title=FreeBSD ${{ matrix.release }} ${{ matrix.arch }}::$line"
           done
           for name in $(grep -E '^--- FAIL' test.log | awk '{print $3}' | head -n 12); do
             body=$(awk -v t="$name" '$0 == "=== RUN   " t {on=1} on {print} on && index($0, "--- FAIL: " t " ") == 1 {exit}' test.log | head -c 20000 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
-            echo "::notice title=FreeBSD ${{ matrix.release }} $name::$body"
+            echo "::notice title=FreeBSD ${{ matrix.release }} ${{ matrix.arch }} $name::$body"
           done
           res=$(grep -E -- '^(--- |ok |FAIL|PASS|panic)' test.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
-          echo "::notice title=FreeBSD ${{ matrix.release }} test results::$res"
+          echo "::notice title=FreeBSD ${{ matrix.release }} ${{ matrix.arch }} test results::$res"
           msg=$(tail -n 120 test.log | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
-          echo "::notice title=FreeBSD ${{ matrix.release }} test log (last 120 lines)::$msg"
+          echo "::notice title=FreeBSD ${{ matrix.release }} ${{ matrix.arch }} test log (last 120 lines)::$msg"
           rc=$(cat test.rc 2>/dev/null || echo missing)
           echo "test exit status: $rc"
           [ "$rc" = "0" ]
