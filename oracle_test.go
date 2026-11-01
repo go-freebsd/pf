@@ -12,6 +12,7 @@ package pf
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -86,6 +87,7 @@ func commitRulesOf(t *testing.T, anchor string, typ RuleSetType, rules ...*Rule)
 var (
 	reSpaces    = regexp.MustCompile(`\s+`)
 	reHost      = regexp.MustCompile(`/(32|128)\b`)
+	reTable     = regexp.MustCompile(`<([^>:]+):[0-9*]+>`)
 	rePortOp    = regexp.MustCompile(`port (=|!=|<=|>=|<|>) ?`)
 	rePortRange = regexp.MustCompile(`(\d+) ?(<>|><) ?(\d+)`)
 )
@@ -97,6 +99,8 @@ var (
 func normalize(s string) string {
 	s = reSpaces.ReplaceAllString(strings.TrimSpace(s), " ")
 	s = reHost.ReplaceAllString(s, "")
+	// pfctl shows the number of addresses of a table: <name:3>
+	s = reTable.ReplaceAllString(s, "<$1>")
 	s = strings.ReplaceAll(s, " flags S/SA", "")
 	s = strings.ReplaceAll(s, " inout", "")
 	// attributes the library does not model: the routing table and pfctl's
@@ -616,4 +620,151 @@ func TestTranslationRulesLoadedByPfctl(t *testing.T) {
 		t.Logf("library: %s", read[i].String())
 		assert.Equal(t, normalize(shown[i]), normalize(read[i].String()), "rule %d", i)
 	}
+}
+
+func netStrings(nets []*net.IPNet) []string {
+	var out []string
+	for _, n := range nets {
+		ones, bits := n.Mask.Size()
+		if ones == bits {
+			out = append(out, n.IP.String())
+		} else {
+			out = append(out, n.String())
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func trimmedLines(out string) []string {
+	var lines []string
+	for _, l := range ruleLines(out) {
+		lines = append(lines, strings.TrimSpace(l))
+	}
+	sort.Strings(lines)
+	return lines
+}
+
+func mustNets(t *testing.T, cidrs ...string) []*net.IPNet {
+	t.Helper()
+	var nets []*net.IPNet
+	for _, c := range cidrs {
+		if !strings.Contains(c, "/") {
+			if strings.Contains(c, ":") {
+				c += "/128"
+			} else {
+				c += "/32"
+			}
+		}
+		_, n, err := net.ParseCIDR(c)
+		require.NoError(t, err)
+		nets = append(nets, n)
+	}
+	return nets
+}
+
+// TestTablesLikePfctl: tables made by the library are the ones pfctl shows
+// with their addresses, tables made by pfctl are read by the library, and a
+// rule that refers to a table is described the same way.
+func TestTablesLikePfctl(t *testing.T) {
+	anchor := oracleAnchor(t, "tables")
+
+	require.NoError(t, pfh.CreateTable(anchor, "t1"))
+	added, err := pfh.AddTableAddresses(anchor, "t1", mustNets(t, "10.9.9.1", "10.8.0.0/16", "2001:db8::/32"))
+	require.NoError(t, err)
+	assert.Equal(t, 3, added)
+	added, err = pfh.AddTableAddresses(anchor, "t1", mustNets(t, "10.9.9.1"))
+	require.NoError(t, err)
+	assert.Equal(t, 0, added, "an address that is there is not added again")
+
+	assert.Equal(t, []string{"t1"}, trimmedLines(pfctl(t, "", "-a", anchor, "-sT")))
+	assert.Equal(t, []string{"10.8.0.0/16", "10.9.9.1", "2001:db8::/32"},
+		trimmedLines(pfctl(t, "", "-a", anchor, "-t", "t1", "-T", "show")))
+
+	// made by pfctl, read by the library
+	pfctl(t, "", "-a", anchor, "-t", "t2", "-T", "add", "10.7.7.7", "10.6.0.0/24", "2001:db8:1::1")
+	tables, err := pfh.Tables(anchor)
+	require.NoError(t, err)
+	var names []string
+	for _, tb := range tables {
+		names = append(names, tb.Name)
+	}
+	sort.Strings(names)
+	assert.Equal(t, []string{"t1", "t2"}, names)
+	nets, err := pfh.TableAddresses(anchor, "t2")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"10.6.0.0/24", "10.7.7.7", "2001:db8:1::1"}, netStrings(nets))
+	nets, err = pfh.TableAddresses(anchor, "t1")
+	require.NoError(t, err)
+	assert.Equal(t, trimmedLines(pfctl(t, "", "-a", anchor, "-t", "t1", "-T", "show")), netStrings(nets))
+
+	// a rule that refers to the table
+	var r Rule
+	r.SetAction(ActionPass)
+	r.SetProtocol(ProtocolTCP)
+	r.SetAddressFamily(AddressFamilyInet)
+	r.SetState(StateKeep)
+	require.NoError(t, r.ParseSource("10.0.0.1", "", false))
+	dst := Address{wrap: &r.wrap.rule.dst.addr}
+	require.NoError(t, dst.SetTableName("t1"))
+	commitRules(t, anchor, &r)
+	shown := ruleLines(pfctl(t, "", "-a", anchor, "-sr"))
+	require.Len(t, shown, 1)
+	t.Logf("library: %s", r.String())
+	t.Logf("pfctl:   %s", shown[0])
+	assert.Equal(t, normalize(shown[0]), normalize(r.String()))
+	back, err := anchorOf(anchor).Rules()
+	require.NoError(t, err)
+	require.Len(t, back, 1)
+	assert.Equal(t, normalize(shown[0]), normalize(back[0].String()))
+
+	// deleting
+	require.NoError(t, pfh.DeleteTable(anchor, "t2"))
+	assert.NotContains(t, trimmedLines(pfctl(t, "", "-a", anchor, "-sT")), "t2")
+}
+
+// TestAnchorsLikePfctl: nested anchors as pfctl -sA lists them.
+func TestAnchorsLikePfctl(t *testing.T) {
+	parent := oracleAnchor(t, "nest")
+	for _, child := range []string{"b", "a"} {
+		pfctl(t, "pass in inet proto tcp from 10.0.0.1 to 10.0.0.2 port 40401 keep state\n",
+			"-a", parent+"/"+child, "-f", "-")
+	}
+	t.Cleanup(func() {
+		for _, child := range []string{"a", "b"} {
+			exec.Command("pfctl", "-a", parent+"/"+child, "-F", "all").Run()
+		}
+	})
+
+	got, err := anchorOf(parent).Anchors()
+	require.NoError(t, err)
+	shown := trimmedLines(pfctl(t, "", "-a", parent, "-sA"))
+	sort.Strings(got)
+	t.Logf("library: %v", got)
+	t.Logf("pfctl:   %v", shown)
+	assert.Equal(t, []string{parent + "/a", parent + "/b"}, got)
+	assert.Equal(t, shown, got)
+}
+
+// TestScrubLikePfctl: a scrub rule is a rule of its own rule set.
+func TestScrubLikePfctl(t *testing.T) {
+	anchor := oracleAnchor(t, "scrub")
+	var r Rule
+	r.SetAction(ActionScrub)
+	r.SetDirection(DirectionIn)
+	r.SetAddressFamily(AddressFamilyInet)
+	require.NoError(t, r.ParseSource("10.0.0.0/8", "", false))
+	require.NoError(t, r.ParseDestination("0.0.0.0/0", "", false))
+	commitRulesOf(t, anchor, RuleSetScrub, &r)
+
+	back, err := anchorOf(anchor).RulesOf(RuleSetScrub)
+	require.NoError(t, err)
+	require.Len(t, back, 1)
+	shown := ruleLines(pfctl(t, "", "-a", anchor, "-sr"))
+	t.Logf("library:  %s", r.String())
+	t.Logf("readback: %s", back[0].String())
+	t.Logf("pfctl:    %v", shown)
+	assert.Equal(t, r.String(), back[0].String())
+	require.Len(t, shown, 1)
+	assert.Equal(t, normalize(shown[0]), normalize(r.String()))
 }

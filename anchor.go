@@ -82,3 +82,30 @@ func (a Anchor) ruleOf(t RuleSetType, ticket, index int, rule *Rule) error {
 	}
 	return nil
 }
+
+// Anchors returns the anchors directly below the anchor, as full paths
+// (what pfctl -a path -sA shows). The pseudo device lists them in the order
+// of the kernel.
+func (a Anchor) Anchors() ([]string, error) {
+	var rs C.struct_pfioc_ruleset
+	if err := cStringCopy(unsafe.Pointer(&rs.path), a.Path, int(C.MAXPATHLEN)); err != nil {
+		return nil, err
+	}
+	if err := a.ioctl(C.DIOCGETRULESETS, unsafe.Pointer(&rs)); err != nil {
+		return nil, fmt.Errorf("DIOCGETRULESETS: %s", err)
+	}
+	n := int(rs.nr)
+	names := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		rs.nr = C.u_int32_t(i)
+		if err := a.ioctl(C.DIOCGETRULESET, unsafe.Pointer(&rs)); err != nil {
+			return nil, fmt.Errorf("DIOCGETRULESET: %s", err)
+		}
+		name := C.GoString(&rs.name[0])
+		if a.Path != "" {
+			name = a.Path + "/" + name
+		}
+		names = append(names, name)
+	}
+	return names, nil
+}
