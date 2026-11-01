@@ -1,36 +1,11 @@
 package pf
 
-import (
-	"testing"
-	"unsafe"
-)
-
-// #include <string.h>
-// #include <sys/ioctl.h>
-// #include <net/if.h>
-// #include <net/pfvar.h>
-import "C"
+import "testing"
 
 func TestRouteDiag(t *testing.T) {
 	probe := func(label, anchor string) {
-		var rules C.struct_pfioc_rule
-		C.strlcpy(&rules.anchor[0], C.CString(anchor), C.MAXPATHLEN)
-		if err := pfh.ioctl(C.DIOCGETRULES, unsafe.Pointer(&rules)); err != nil {
-			t.Logf("%s: GETRULES: %v", label, err)
-			return
-		}
-		t.Logf("%s: nr=%d ticket=%d", label, rules.nr, rules.ticket)
-		for _, act := range []int{C.PF_PASS, C.PF_DROP, C.PF_NAT, C.PF_RDR, C.PF_BINAT} {
-			for _, last := range []int{0, 1} {
-				var pp C.struct_pfioc_pooladdr
-				pp.ticket = rules.ticket
-				pp.r_num = 0
-				pp.r_action = C.u_int8_t(act)
-				pp.r_last = C.u_int8_t(last)
-				C.strlcpy(&pp.anchor[0], C.CString(anchor), C.MAXPATHLEN)
-				err := pfh.ioctl(C.DIOCGETADDRS, unsafe.Pointer(&pp))
-				t.Logf("%s: GETADDRS r_action=%d r_last=%d -> nr=%d err=%v", label, act, last, pp.nr, err)
-			}
+		for _, l := range diagGetAddrs(anchorOf(anchor), anchor) {
+			t.Logf("%s: %s", label, l)
 		}
 	}
 	theirs := oracleAnchor(t, "diag-theirs")
