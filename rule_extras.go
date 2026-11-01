@@ -52,21 +52,6 @@ static void rule_set_set_prio_raw(struct pf_rule *r, unsigned int a, unsigned in
 static unsigned int rule_set_prio_at(struct pf_rule *r, int i) { return r->set_prio[i]; }
 static int rule_has_set_prio(struct pf_rule *r) { return (r->scrub_flags & PFSTATE_SETPRIO) != 0; }
 
-static void rule_set_dn(struct pf_rule *r, unsigned int pipe, unsigned int rpipe, int isqueue) {
-	r->dnpipe = pipe;
-	r->dnrpipe = rpipe;
-	r->free_flags &= ~(PFRULE_DN_IS_PIPE | PFRULE_DN_IS_QUEUE);
-	if (pipe != 0 || rpipe != 0)
-		r->free_flags |= isqueue ? PFRULE_DN_IS_QUEUE : PFRULE_DN_IS_PIPE;
-}
-static void rule_set_dn_raw(struct pf_rule *r, unsigned int pipe, unsigned int rpipe, unsigned int flags) {
-	r->dnpipe = pipe;
-	r->dnrpipe = rpipe;
-	r->free_flags = flags;
-}
-static unsigned int rule_dnpipe(struct pf_rule *r) { return r->dnpipe; }
-static unsigned int rule_dnrpipe(struct pf_rule *r) { return r->dnrpipe; }
-static int rule_dn_is_queue(struct pf_rule *r) { return (r->free_flags & PFRULE_DN_IS_QUEUE) != 0; }
 */
 import "C"
 
@@ -176,29 +161,9 @@ func (r Rule) SetPriorityOf() (prio, replyPrio int, ok bool) {
 	return int(C.rule_set_prio_at(&r.wrap.rule, 0)), int(C.rule_set_prio_at(&r.wrap.rule, 1)), true
 }
 
-// SetDummynet sends the packets of the rule through a dummynet pipe, or with
-// queue a dummynet queue ("dnpipe 1", "dnqueue (1, 2)"). The reverse
-// pipe, 0 for none, is for the packets of the opposite direction. The pipes
-// are made with ipfw(8) and need dummynet in the kernel.
-func (r *Rule) SetDummynet(pipe, reverse uint16, queue bool) {
-	q := 0
-	if queue {
-		q = 1
-	}
-	C.rule_set_dn(&r.wrap.rule, C.uint(pipe), C.uint(reverse), C.int(q))
-}
-
-// Dummynet returns the pipe or queue of the rule, the reverse one, whether
-// it is a queue and whether the rule has one.
-func (r Rule) Dummynet() (pipe, reverse uint16, queue, ok bool) {
-	pipe = uint16(C.rule_dnpipe(&r.wrap.rule))
-	reverse = uint16(C.rule_dnrpipe(&r.wrap.rule))
-	return pipe, reverse, C.rule_dn_is_queue(&r.wrap.rule) != 0, pipe != 0 || reverse != 0
-}
-
 // setExtrasRaw stores what the kernel reports for the attributes of this
 // file.
-func (r *Rule) setExtrasRaw(qname, pqname, tag, matchTag string, matchNot, prio uint64, setPrio []uint64, dnpipe, dnrpipe, dnflags uint64) {
+func (r *Rule) setExtrasRaw(qname, pqname, tag, matchTag string, matchNot, prio uint64, setPrio []uint64) {
 	_ = r.SetQueue(qname, pqname)
 	_ = r.SetTag(tag)
 	_ = r.SetTagged(matchTag, matchNot != 0)
@@ -207,7 +172,6 @@ func (r *Rule) setExtrasRaw(qname, pqname, tag, matchTag string, matchNot, prio 
 		setPrio = append(setPrio, 0)
 	}
 	C.rule_set_set_prio_raw(&r.wrap.rule, C.uint(setPrio[0]), C.uint(setPrio[1]))
-	C.rule_set_dn_raw(&r.wrap.rule, C.uint(dnpipe), C.uint(dnrpipe), C.uint(dnflags))
 }
 
 // prioString is how pfctl prints the priority a rule matches and sets.
@@ -226,7 +190,7 @@ func (r Rule) prioString() []string {
 	return out
 }
 
-// extrasString is how pfctl prints the queue, tags and dummynet pipe after
+// extrasString is how pfctl prints the queue and the tags after
 // the state.
 func (r Rule) extrasString() []string {
 	var out []string
@@ -245,17 +209,6 @@ func (r Rule) extrasString() []string {
 			out = append(out, "! tagged "+t)
 		} else {
 			out = append(out, "tagged "+t)
-		}
-	}
-	if pipe, rev, queue, ok := r.Dummynet(); ok {
-		kind := "dnpipe"
-		if queue {
-			kind = "dnqueue"
-		}
-		if rev != 0 {
-			out = append(out, fmt.Sprintf("%s(%d, %d)", kind, pipe, rev))
-		} else {
-			out = append(out, fmt.Sprintf("%s %d", kind, pipe))
 		}
 	}
 	return []string{strings.Join(out, " ")}

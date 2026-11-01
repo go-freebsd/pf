@@ -512,39 +512,6 @@ func oracleRuleCases() []ruleCase {
 			}
 			return r.ParseDestination("0.0.0.0/0", "41010", false)
 		}},
-		{"dnpipe", func(r *Rule) error {
-			tcp(r)
-			r.SetDirection(DirectionIn)
-			r.SetAddressFamily(AddressFamilyInet)
-			r.SetState(StateKeep)
-			r.SetDummynet(1, 0, false)
-			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
-				return err
-			}
-			return r.ParseDestination("0.0.0.0/0", "41011", false)
-		}},
-		{"dnpipe pair", func(r *Rule) error {
-			tcp(r)
-			r.SetDirection(DirectionIn)
-			r.SetAddressFamily(AddressFamilyInet)
-			r.SetState(StateKeep)
-			r.SetDummynet(1, 2, false)
-			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
-				return err
-			}
-			return r.ParseDestination("0.0.0.0/0", "41012", false)
-		}},
-		{"dnqueue", func(r *Rule) error {
-			tcp(r)
-			r.SetDirection(DirectionIn)
-			r.SetAddressFamily(AddressFamilyInet)
-			r.SetState(StateKeep)
-			r.SetDummynet(3, 0, true)
-			if err := r.ParseSource("0.0.0.0/0", "", false); err != nil {
-				return err
-			}
-			return r.ParseDestination("0.0.0.0/0", "41013", false)
-		}},
 		{"modulate state", func(r *Rule) error {
 			tcp(r)
 			r.SetAddressFamily(AddressFamilyInet)
@@ -1285,15 +1252,6 @@ func TestRuleExtras(t *testing.T) {
 	assert.Equal(t, []int{3, 5}, []int{a, b})
 	r.ClearSetPriority()
 	_, _, ok = r.SetPriorityOf()
-	assert.False(t, ok)
-
-	r.SetDummynet(4, 5, true)
-	pipe, rev, queue, ok := r.Dummynet()
-	assert.True(t, ok)
-	assert.True(t, queue)
-	assert.Equal(t, []uint16{4, 5}, []uint16{pipe, rev})
-	r.SetDummynet(0, 0, false)
-	_, _, _, ok = r.Dummynet()
 	assert.False(t, ok)
 
 	assert.NoError(t, r.SetTagged("a", true))

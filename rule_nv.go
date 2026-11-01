@@ -132,8 +132,7 @@ func (r *Rule) fromNV(n *nv) error {
 	tag, _ := n.str("tagname")
 	matchTag, _ := n.str("match_tagname")
 	setPrio, _ := n.numbers("set_prio")
-	r.setExtrasRaw(qname, pqname, tag, matchTag, num(n, "match_tag_not"), num(n, "prio"), setPrio,
-		num(n, "dnpipe"), num(n, "dnrpipe"), num(n, "dnflags"))
+	r.setExtrasRaw(qname, pqname, tag, matchTag, num(n, "match_tag_not"), num(n, "prio"), setPrio)
 	if d, ok := n.child("divert"); ok {
 		var addr []byte
 		if c, ok := d.child("addr"); ok {
