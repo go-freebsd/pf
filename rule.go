@@ -14,6 +14,9 @@ type Rule struct {
 	// rtable is the routing table plus one; 0 for a rule without one, which
 	// the kernel is told as -1
 	rtable int32
+	// divertV6 remembers that the divert address is an IPv6 address when the
+	// rule has no address family
+	divertV6 bool
 }
 
 // poolAddr is one address of a pool, with the interface of a route target
