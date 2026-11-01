@@ -41,7 +41,8 @@ func (r Rule) String() string {
 
 	if addr, ports := r.Redirect(); addr != "" {
 		dump = append(dump, "->", addr)
-		if ports != "" {
+		// pfctl leaves out the default port range of a nat rule
+		if ports != "" && !(r.Action() == ActionNAT && ports == "50001:65535") {
 			dump = append(dump, "port", ports)
 		}
 	}

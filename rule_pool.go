@@ -82,9 +82,21 @@ func (r Rule) Redirect() (address, ports string) {
 	return address, ports
 }
 
+// the dynamic port range pfctl gives a nat rule without a port clause
+const (
+	natPortLow  = 50001
+	natPortHigh = 65535
+)
+
 // addPool hands the translation addresses of the rule to the kernel; they
 // belong to the pool ticket that DIOCBEGINADDRS gave for the rule.
 func (rs RuleSet) addPool(r *Rule, ticket C.u_int32_t) error {
+	// A nat rule without ports translates to the dynamic range, as pfctl
+	// does; with no range the kernel shows the rule as "static-port".
+	if Action(r.wrap.rule.action) == ActionNAT && len(r.pool) > 0 &&
+		C.rule_proxy_port(&r.wrap.rule, 0) == 0 && C.rule_proxy_port(&r.wrap.rule, 1) == 0 {
+		r.setProxyPorts(natPortLow, natPortHigh, 0)
+	}
 	for i := range r.pool {
 		var pp C.struct_pfioc_pooladdr
 		pp.ticket = ticket
