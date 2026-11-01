@@ -73,6 +73,16 @@ the attributes the library does not model (`rtable 0`, a scrub rule's
 `fragment reassemble`). Continuous integration runs
 the tests in FreeBSD 14.3 and 15.0 virtual machines.
 
+# FreeBSD 15 and the targets of route-to
+
+FreeBSD 15 keeps the targets of `route-to`, `reply-to` and `dup-to` in a pool
+of their own that the kernel only hands out through netlink. The ioctl
+interface this package uses can write them (`SetRoute` works, and pfctl shows
+the targets), but not read them: a rule read on FreeBSD 15 reports its kind of
+routing from `Route()` and no targets, and `String()` prints the keyword
+without them. On FreeBSD 14 the targets are read as well. The comparison with
+pfctl accounts for that.
+
 # What the library covers
 
 * Filter rules (`pass`, `block`/`drop`): action, direction, `log`, `quick`,

@@ -123,7 +123,29 @@ func normalize(s string) string {
 		return "port " + sub[1]
 	})
 	s = rePortRange.ReplaceAllString(s, "$1$2$3")
-	return s
+	return routeless(s)
+}
+
+var (
+	reRoute        = regexp.MustCompile(`(route-to|reply-to|dup-to)( \([^)]*\)| \{[^}]*\})?( round-robin)?`)
+	routeTargetsOK = func() bool {
+		out, err := exec.Command("sysctl", "-n", "kern.osreldate").Output()
+		if err != nil {
+			return true
+		}
+		v, _ := strconv.Atoi(strings.TrimSpace(string(out)))
+		// FreeBSD 15 keeps the route pool where only netlink reads it
+		return v < 1500000
+	}()
+)
+
+// routeless keeps the route-to, reply-to or dup-to of a rule but not its
+// targets, if the kernel does not hand them out (FreeBSD 15).
+func routeless(s string) string {
+	if routeTargetsOK {
+		return s
+	}
+	return reRoute.ReplaceAllString(s, "$1")
 }
 
 func ruleLines(out string) []string {
@@ -414,7 +436,7 @@ func TestRulesLikePfctl(t *testing.T) {
 			t.Logf("readback: %s", back[0].String())
 			t.Logf("pfctl:    %s", shown[0])
 			assert.Equal(t, normalize(shown[0]), normalize(r.String()), "pfctl vs rule written")
-			assert.Equal(t, r.String(), back[0].String(), "rule written vs rule read back")
+			assert.Equal(t, routeless(r.String()), routeless(back[0].String()), "rule written vs rule read back")
 		})
 	}
 }

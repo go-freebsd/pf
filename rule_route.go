@@ -101,7 +101,12 @@ func (r *Rule) SetRoute(t RouteType, targets ...RouteTarget) error {
 	return nil
 }
 
-// Route returns how the rule routes its packets and the targets.
+// Route returns how the rule routes its packets and the targets. For a rule
+// read from the kernel of FreeBSD 15 the targets are missing: the kernel only
+// hands out the route pool of a rule through netlink, which this package does
+// not use (the ioctl interface returns the pool of "rdr" and "nat" rules
+// only). They are there when the rule was set with SetRoute, and when it is
+// read on FreeBSD 14.
 func (r Rule) Route() (RouteType, []RouteTarget) {
 	t := RouteType(C.rule_rt(&r.wrap.rule))
 	if t == RouteNone {
@@ -132,6 +137,10 @@ func (r Rule) routeString() string {
 	parts := make([]string, 0, len(targets))
 	for _, tg := range targets {
 		parts = append(parts, fmt.Sprintf("(%s %s)", tg.Interface, tg.Address))
+	}
+	if len(parts) == 0 {
+		// the targets could not be read, see Route
+		return t.String()
 	}
 	var b strings.Builder
 	b.WriteString(t.String())
