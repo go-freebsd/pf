@@ -70,6 +70,7 @@ func (r Rule) String() string {
 		if ports != "" && !(r.Action() == ActionNAT && ports == "50001:65535") {
 			dump = append(dump, "port", ports)
 		}
+		dump = append(dump, r.poolString()...)
 	}
 
 	dump = append(dump, r.prioString()...)

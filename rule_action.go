@@ -42,6 +42,10 @@ const (
 
 	// ActionDefer TODO is this divert?
 	ActionDefer Action = C.PF_DEFER
+
+	// ActionMatch Filter rule that only sets options for the packets it
+	// matches and does not decide about them ("match" of pf.conf).
+	ActionMatch Action = C.PF_MATCH
 )
 
 func (a Action) String() string {
@@ -70,6 +74,8 @@ func (a Action) String() string {
 		return "synproxy drop"
 	case ActionDefer:
 		return "defer"
+	case ActionMatch:
+		return "match"
 	default:
 		return fmt.Sprintf("Action(%d)", a)
 	}

@@ -123,6 +123,7 @@ func (r *Rule) fromNV(n *nv) error {
 			ports = append(ports, 0)
 		}
 		r.setProxyPorts(uint(ports[0]), uint(ports[1]), uint(num(pool, "opts")))
+		r.staticPort = ports[0] == 0 && ports[1] == 0 && Action(r.wrap.rule.action) == ActionNAT
 	}
 	r.setRouteRaw(RouteType(num(n, "rt")))
 	r.setScrubRaw(num(n, "rule_flag"), num(n, "scrub_flags"), num(n, "min_ttl"), num(n, "max_mss"))

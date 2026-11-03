@@ -11,6 +11,8 @@ type Rule struct {
 	// of a nat, rdr or binat rule ("-> address") or the targets of route-to,
 	// reply-to and dup-to; the kernel keeps them apart from the rule
 	pool []poolAddr
+	// staticPort: a nat rule keeps the source port (proxy ports 0:0)
+	staticPort bool
 	// rtable is the routing table plus one; 0 for a rule without one, which
 	// the kernel is told as -1
 	rtable int32
