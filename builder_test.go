@@ -84,7 +84,9 @@ var defaultCases = []struct {
 	{"nat static port", "nat on lo0 inet from 10.0.0.0/24 to any -> 192.0.2.1 static-port",
 		func() *RuleBuilder { return NAT().On("lo0").From("10.0.0.0/24").RedirectTo("192.0.2.1").StaticPort() }},
 	{"nat port range", "nat on lo0 inet from 10.0.0.0/24 to any -> 192.0.2.1 port 40000:40100",
-		func() *RuleBuilder { return NAT().On("lo0").From("10.0.0.0/24").RedirectTo("192.0.2.1").RedirectPort("40000:40100") }},
+		func() *RuleBuilder {
+			return NAT().On("lo0").From("10.0.0.0/24").RedirectTo("192.0.2.1").RedirectPort("40000:40100")
+		}},
 	{"nat table random", "nat on lo0 inet from 10.0.0.0/24 to any -> <pool> random",
 		func() *RuleBuilder { return NAT().On("lo0").From("10.0.0.0/24").RedirectToTable("pool").Random() }},
 	{"nat interface network", "nat on lo0 inet from 10.0.0.0/24 to any -> (lo0:network)",

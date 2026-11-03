@@ -31,7 +31,7 @@ func newAddress() *Address {
 }
 
 // any is the pf represnetation of the any address
-var any = net.IPNet{
+var anyNet = net.IPNet{
 	IP:   net.IPv6zero,
 	Mask: net.IPMask(net.IPv6zero),
 }
@@ -179,13 +179,13 @@ func (a Address) Any() bool {
 		return false
 	}
 
-	return bytes.Compare(any.IP, a.wrap.v[0:16]) == 0 &&
-		bytes.Compare(any.Mask, a.wrap.v[16:32]) == 0
+	return bytes.Compare(anyNet.IP, a.wrap.v[0:16]) == 0 &&
+		bytes.Compare(anyNet.Mask, a.wrap.v[16:32]) == 0
 }
 
 // SetAny will turn the address into an any IP address
 func (a *Address) SetAny() {
-	a.SetIPNet(&any)
+	a.SetIPNet(&anyNet)
 }
 
 // IPNet returns the IPNetwork (IPv4/IPv6) of the address with mask
