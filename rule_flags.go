@@ -103,18 +103,17 @@ func (r *Rule) ParseTCPFlags(s string) error {
 	return r.SetTCPFlags(flags, mask)
 }
 
-// tcpFlagsString is how pfctl prints the flags of a tcp rule: "flags S/SA",
-// "flags any" for a rule that keeps state and does not look at the flags,
-// nothing for a rule without state.
+// tcpFlagsString is how pfctl prints the flags of a rule: "flags S/SA" when
+// flags or mask are set (whatever the protocol: pfctl gives a pass rule that
+// keeps state and has no protocol the flags S/SA as well), "flags any" for a
+// tcp rule that keeps state and does not look at the flags, nothing
+// otherwise.
 func (r Rule) tcpFlagsString() string {
-	if r.Protocol() != ProtocolTCP {
-		return ""
-	}
 	flags, mask := r.TCPFlags()
 	if flags != 0 || mask != 0 {
 		return fmt.Sprintf("flags %s/%s", flags, mask)
 	}
-	if r.State() != StateNo {
+	if r.Protocol() == ProtocolTCP && r.State() != StateNo {
 		return "flags any"
 	}
 	return ""
