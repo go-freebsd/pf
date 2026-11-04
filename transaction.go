@@ -12,7 +12,7 @@ import (
 /*
 int init_pfioc_trans(struct pfioc_trans *tx, int elements) {
 	tx->size = elements;
-	tx->esize = elements * sizeof(struct pfioc_trans_e);
+	tx->esize = sizeof(struct pfioc_trans_e);
 	tx->array = (struct pfioc_trans_e*)calloc(elements,
 		sizeof(struct pfioc_trans_e));
 	if (tx->array == NULL) {

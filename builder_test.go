@@ -216,3 +216,27 @@ func TestBuilderCloneIsIndependent(t *testing.T) {
 	assert.Contains(t, b.String(), "udp")
 	assert.NotContains(t, base.String(), "proto")
 }
+
+// A transaction with several rule sets used to fail: esize has to be the size
+// of one element, not of all of them.
+func TestTransactionWithSeveralRuleSets(t *testing.T) {
+	anchor := oracleAnchor(t, "multi")
+	err := NewRuleset().
+		Add(Scrub().In().On("lo0")).
+		Add(NAT().On("lo0").From("10.0.0.0/24").RedirectTo("192.0.2.1")).
+		Add(RDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.1").ToPort("8080").RedirectTo("10.0.0.5", "80")).
+		Add(BINAT().On("lo0").From("10.0.0.9").RedirectTo("192.0.2.9")).
+		Add(Pass().In().On("lo0")).
+		Add(Block().Out()).
+		Load(pfh, anchor)
+	require.NoError(t, err)
+	nat, filter := shown(t, anchor)
+	assert.Len(t, ruleLines(nat), 3, nat)
+	assert.Len(t, ruleLines(filter), 3, filter)
+
+	// loading again replaces everything, and an empty set empties every rule set
+	require.NoError(t, NewRuleset().Load(pfh, anchor))
+	nat, filter = shown(t, anchor)
+	assert.Empty(t, ruleLines(nat))
+	assert.Empty(t, ruleLines(filter))
+}
