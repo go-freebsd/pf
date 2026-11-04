@@ -35,6 +35,24 @@ ioctl(2) call require a so-called ticket, which prevents the occurrence
 of multiple concurrent manipulations. Tickets are modeled as transaction
 objects inside the library.
 
+Rules are built with a builder that reads like pf.conf and gives the defaults
+pfctl gives (a pass rule keeps state, with the TCP flags S/SA for tcp):
+
+	nat := pf.NAT().On("em0").Inet().RedirectToInterface("em0").RoundRobin()
+	// nat on em0 inet from any to any -> (em0) round-robin
+
+	err := pf.NewRuleset().
+		Add(nat).
+		Add(pf.Block().In().Quick().From("10.0.0.0/8")).
+		Add(pf.Pass().Out().On("em0")).
+		Load(pfh, "")
+
+Load replaces the rules of the anchor in one transaction. Errors of the
+builder are collected and returned by Rule, Rules and Load; nothing is sent
+to the kernel unless every rule is valid. The low-level Rule type, the
+transactions and the rest of the interface remain for what the builder does
+not cover.
+
 Working with pf directly on a remote connection can cause you to loose
 the connection in case of a programming error. Make sure you have a
 second way to access the system e.g. a serial console.

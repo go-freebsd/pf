@@ -6,6 +6,56 @@
 [![FreeBSD 11](https://img.shields.io/badge/freebsd-11-green.svg)](https://www.freebsd.org/releases/11.0R/announce.html)
 [![FreeBSD HEAD](https://img.shields.io/badge/freebsd-HEAD-green.svg)](https://svnweb.freebsd.org/base/head/)
 
+## Quick start
+
+Rules are built the way `pf.conf` writes them, with the defaults `pfctl`
+gives, and loaded in one transaction (you need to be root, and `pf.ko`
+loaded):
+
+```go
+pfh, err := pf.Open()
+if err != nil {
+	log.Fatal(err)
+}
+defer pfh.Close()
+
+// nat on em0 inet from any to any -> (em0) round-robin
+//   (the rule asked for in issue #5)
+nat := pf.NAT().On("em0").Inet().RedirectToInterface("em0").RoundRobin()
+
+err = pf.NewRuleset().
+	Add(pf.Scrub().In().On("em0")).                                      // scrub in on em0 all
+	Add(nat).
+	Add(pf.Block().In().Quick().From("10.0.0.0/8")).                     // block in quick from 10.0.0.0/8 to any
+	Add(pf.Pass().Out().On("em0")).                                      // pass out on em0 flags S/SA keep state
+	Add(pf.Pass().In().On("em0").Proto(pf.ProtocolTCP).ToPort("22")).    // pass in on em0 proto tcp ... port 22 flags S/SA keep state
+	Load(pfh, "") // replaces the rules of the main rule set, atomically
+```
+
+* Every method is the word you know from `pf.conf`: `In`, `Out`, `Quick`,
+  `Log`, `On`, `OnNot`, `OnAny("em0", "em1")`, `Inet`, `Inet6`, `Proto`,
+  `From`, `To`, `FromPort`, `ToPort`, `Flags`, `KeepState`, `NoState`,
+  `RedirectTo`, `RedirectToInterface`, `RedirectToTable`, `RoundRobin`,
+  `StaticPort`, `RouteTo`, `DivertTo`, `Tag`, `Tagged`, `Prio`, `Queue`,
+  `NoDF`, `MinTTL`, ... Addresses are written as in `pf.conf` too: `"any"`,
+  `"10.0.0.0/8"`, `"<table>"`, `"(em0)"`, `"(em0:network)"`, `"no-route"`.
+* **Defaults are pfctl's**, and the tests check them against `pfctl` on
+  FreeBSD 14.3 and 15.0: the minimal builder and the minimal `pf.conf` line
+  give the same rule in the kernel. A `Pass` keeps state (`NoState` opts
+  out) and matches the TCP flags `S/SA`; a `Block` drops; `any` is any
+  address and no port is no port; a `nat` rule without ports uses the dynamic
+  range 50001:65535 (`StaticPort` keeps the source port); a direction is both.
+* **Errors are collected**, not panicked: a wrong argument is remembered, the
+  chain goes on, and `Rule()`, `Rules()` or `Load` return all of them. The
+  builder refuses what pfctl refuses (a port without `tcp` or `udp`, `flags`
+  without `tcp`, a `nat` rule without a target or with a direction, `reassemble
+  tcp` with a direction, mixed address families, ...) before anything is sent to
+  the kernel.
+* `Rules()` returns what pfctl expands: `OnAny("em0", "em1")` is one kernel
+  rule per interface. `String()` is the rule as pfctl prints it.
+* The low-level `Rule` API below is unchanged and still there for everything
+  the builder does not cover yet; `docs/coverage.md` lists what is covered.
+
 The FreeBSD operating system has multiple packet filter build-in. One of
 the packet filters was ported from OpenBSD and is called pf (packetfilter).
 
