@@ -2,9 +2,8 @@
 
 [![GoDoc](https://godoc.org/github.com/go-freebsd/pf?status.svg)](https://godoc.org/github.com/go-freebsd/pf)
 [![Coverage 84.7%](https://img.shields.io/badge/coverage-84.7%25-green.svg)]()
-[![FreeBSD 10.3](https://img.shields.io/badge/freebsd-10.3-green.svg)](https://www.freebsd.org/releases/10.3R/announce.html)
-[![FreeBSD 11](https://img.shields.io/badge/freebsd-11-green.svg)](https://www.freebsd.org/releases/11.0R/announce.html)
-[![FreeBSD HEAD](https://img.shields.io/badge/freebsd-HEAD-green.svg)](https://svnweb.freebsd.org/base/head/)
+[![FreeBSD 14.3](https://img.shields.io/badge/freebsd-14.3-green.svg)](https://www.freebsd.org/releases/14.3R/announce/)
+[![FreeBSD 15.0](https://img.shields.io/badge/freebsd-15.0-green.svg)](https://www.freebsd.org/releases/15.0R/announce/)
 
 ## Quick start
 
@@ -99,8 +98,10 @@ second way to access the system e.g. a serial console.
 The library is tested on FreeBSD 14.3 and 15.0 (amd64). FreeBSD 15 removed
 the struct based `DIOCGETRULE` and `DIOCGETSTATUS` ioctls; the rules and the
 status are therefore read with their nvlist variants (`DIOCGETRULENV`,
-`DIOCGETSTATUSNV`, through libnv), which exist on 14 and 15. The older
-releases listed in the badges above are no longer exercised.
+`DIOCGETSTATUSNV`, through libnv), which exist on 14 and 15. Older releases
+(10 and 11 were the first targets of this package) are not exercised any more
+and are not supported; FreeBSD 14.3 and 15.0 are tested in CI on every push
+(amd64, and 14.3 on an emulated aarch64 VM).
 
 # Testing
 
