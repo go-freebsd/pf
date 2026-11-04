@@ -120,6 +120,14 @@ func (b *RuleBuilder) validate() error {
 			bad("only nat, rdr and binat rules have a target")
 		}
 	}
+	if b.kind.translation() || b.kind == kindScrub {
+		if b.route != nil || b.divert != nil || b.queue != "" || b.prioSet || b.setPrioSet || b.taggedSet {
+			bad("route-to, divert-to, queue, prio and tagged are for pass, block and match rules")
+		}
+	}
+	if b.kind == kindBlock && b.route != nil {
+		bad("a block rule does not route")
+	}
 	if b.kind == kindScrub {
 		if b.stateSet || b.flagsSet {
 			bad("a scrub rule keeps no state and has no TCP flags")
@@ -190,6 +198,9 @@ func (b *RuleBuilder) build(itf string) (*Rule, error) {
 				return nil, fmt.Errorf("flags %q: %w", b.flags, err)
 			}
 		}
+	}
+	if err := b.buildOptions(&r); err != nil {
+		return nil, err
 	}
 	return &r, nil
 }
@@ -268,4 +279,47 @@ func singleFlag(f DynamicFlag) []DynamicFlag {
 		return nil
 	}
 	return []DynamicFlag{f}
+}
+
+// buildOptions applies the options of the rule that no kind forbids.
+func (b *RuleBuilder) buildOptions(r *Rule) error {
+	if b.route != nil {
+		if err := r.SetRoute(b.route.kind, b.route.targets...); err != nil {
+			return err
+		}
+	}
+	if b.divert != nil {
+		if err := r.SetDivertTo(b.divert.addr, b.divert.port); err != nil {
+			return err
+		}
+	}
+	if b.rtableSet {
+		r.SetRTable(b.rtable)
+	}
+	if b.tag != "" {
+		if err := r.SetTag(b.tag); err != nil {
+			return err
+		}
+	}
+	if b.taggedSet {
+		if err := r.SetTagged(b.tagged, b.taggedNot); err != nil {
+			return err
+		}
+	}
+	if b.prioSet {
+		if err := r.SetPriority(b.prio); err != nil {
+			return err
+		}
+	}
+	if b.setPrioSet {
+		if err := r.SetSetPriority(b.setPrio, b.setPrioReply); err != nil {
+			return err
+		}
+	}
+	if b.queue != "" {
+		if err := r.SetQueue(b.queue, b.queuePrio); err != nil {
+			return err
+		}
+	}
+	return nil
 }

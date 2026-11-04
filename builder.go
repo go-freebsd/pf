@@ -48,6 +48,26 @@ type RuleBuilder struct {
 
 	scrub    ScrubOptions
 	scrubSet bool
+
+	route  *routeSpec
+	divert *divertSpec
+
+	rtable    int
+	rtableSet bool
+
+	tag       string
+	tagged    string
+	taggedSet bool
+	taggedNot bool
+
+	prio         int
+	prioSet      bool
+	setPrio      int
+	setPrioReply int
+	setPrioSet   bool
+
+	queue     string
+	queuePrio string
 }
 
 type builderKind uint8
@@ -182,6 +202,15 @@ func (b *RuleBuilder) Clone() *RuleBuilder {
 	if b.redirect != nil {
 		r := *b.redirect
 		c.redirect = &r
+	}
+	if b.route != nil {
+		r := *b.route
+		r.targets = append([]RouteTarget(nil), b.route.targets...)
+		c.route = &r
+	}
+	if b.divert != nil {
+		d := *b.divert
+		c.divert = &d
 	}
 	return &c
 }

@@ -102,6 +102,49 @@ var defaultCases = []struct {
 		func() *RuleBuilder { return NoRDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.9").ToPort("40004") }},
 	{"binat", "binat on lo0 inet from 10.0.0.9 to any -> 192.0.2.9",
 		func() *RuleBuilder { return BINAT().On("lo0").From("10.0.0.9").RedirectTo("192.0.2.9") }},
+	{"route-to", "pass out route-to (lo0 127.0.0.1) inet proto tcp from any to any port 40801",
+		func() *RuleBuilder {
+			return Pass().Out().Proto(ProtocolTCP).ToPort("40801").RouteTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"})
+		}},
+	{"reply-to", "pass in reply-to (lo0 127.0.0.1) inet proto tcp from any to any port 40802",
+		func() *RuleBuilder {
+			return Pass().In().Proto(ProtocolTCP).ToPort("40802").ReplyTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"})
+		}},
+	{"dup-to", "pass out dup-to (lo0 127.0.0.1) inet proto tcp from any to any port 40803",
+		func() *RuleBuilder {
+			return Pass().Out().Proto(ProtocolTCP).ToPort("40803").DupTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"})
+		}},
+	{"route-to a list", "pass out route-to { (lo0 127.0.0.1) (lo0 127.0.0.2) } inet proto tcp from any to any port 40804",
+		func() *RuleBuilder {
+			return Pass().Out().Proto(ProtocolTCP).ToPort("40804").
+				RouteTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"}, RouteTarget{Interface: "lo0", Address: "127.0.0.2"})
+		}},
+	{"divert-to", "pass in inet proto tcp from any to any port 40910 divert-to 127.0.0.1 port 40911",
+		func() *RuleBuilder {
+			return Pass().In().Proto(ProtocolTCP).ToPort("40910").DivertTo("127.0.0.1", 40911)
+		}},
+	{"rtable 0", "pass in inet proto tcp from any to any port 40901 rtable 0",
+		func() *RuleBuilder { return Pass().In().Inet().Proto(ProtocolTCP).ToPort("40901").RTable(0) }},
+	{"tag", "pass in proto tcp from any to any port 40902 tag T1",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40902").Tag("T1") }},
+	{"tagged", "pass in proto tcp from any to any port 40903 tagged T1",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40903").Tagged("T1") }},
+	{"not tagged", "pass in proto tcp from any to any port 40904 !tagged T1",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40904").NotTagged("T1") }},
+	{"tag and tagged", "pass in proto tcp from any to any port 40905 tagged T1 tag T2",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40905").Tagged("T1").Tag("T2") }},
+	{"prio", "pass in proto tcp from any to any port 40906 prio 3",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40906").Prio(3) }},
+	{"set prio", "pass in proto tcp from any to any port 40907 set prio 4",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40907").SetPrio(4) }},
+	{"set prio pair", "pass in proto tcp from any to any port 40908 set prio (3, 5)",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40908").SetPrio(3, 5) }},
+	{"queue", "pass in proto tcp from any to any port 40909 queue foo",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40909").Queue("foo") }},
+	{"queue pair", "pass in proto tcp from any to any port 40920 queue (std, ack)",
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).ToPort("40920").Queue("std", "ack") }},
+	{"match with options", "match in proto tcp from any to any port 40921 tag T3 set prio 2",
+		func() *RuleBuilder { return Match().In().Proto(ProtocolTCP).ToPort("40921").Tag("T3").SetPrio(2) }},
 	{"scrub", "scrub in on lo0 all", func() *RuleBuilder { return Scrub().In().On("lo0") }},
 	{"scrub options", "scrub in on lo0 all no-df min-ttl 64 max-mss 1440 random-id",
 		func() *RuleBuilder { return Scrub().In().On("lo0").NoDF().MinTTL(64).MaxMSS(1440).RandomID() }},
@@ -159,6 +202,10 @@ var rejectCases = []struct {
 	{"inet with an inet6 address", "pass inet from ::1 to any",
 		func() *RuleBuilder { return Pass().Inet().From("::1") },
 		func() *RuleBuilder { return Pass().Inet6().From("::1") }, "pass inet6 from ::1 to any"},
+	{"divert-to on an out rule", "pass out inet proto tcp from any to any divert-to 127.0.0.1 port 40911",
+		func() *RuleBuilder { return Pass().Out().Proto(ProtocolTCP).DivertTo("127.0.0.1", 40911) },
+		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).DivertTo("127.0.0.1", 40911) },
+		"pass in inet proto tcp from any to any divert-to 127.0.0.1 port 40911"},
 	{"nat without a target", "nat on lo0 inet from any to any",
 		func() *RuleBuilder { return NAT().On("lo0").Inet() },
 		func() *RuleBuilder { return NAT().On("lo0").Inet().RedirectTo("192.0.2.1") }, "nat on lo0 inet from any to any -> 192.0.2.1"},
