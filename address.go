@@ -95,6 +95,11 @@ func (a *Address) SetInterface(itf string) error {
 	if err != nil {
 		return err
 	}
+	// pfctl gives the dynamic address a full host mask; without it the kernel
+	// shows the address as "(em0)/0"
+	for i := 16; i < 32; i++ {
+		a.wrap.v[i] = 0xff
+	}
 	C.set_addr_type(a.wrap, C.PF_ADDR_DYNIFTL)
 	return nil
 }

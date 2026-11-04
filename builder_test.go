@@ -89,7 +89,7 @@ var defaultCases = []struct {
 		}},
 	{"nat table random", "nat on lo0 inet from 10.0.0.0/24 to any -> <pool> random",
 		func() *RuleBuilder { return NAT().On("lo0").From("10.0.0.0/24").RedirectToTable("pool").Random() }},
-	{"nat interface network", "nat on lo0 inet from 10.0.0.0/24 to any -> (lo0:network)",
+	{"nat interface network", "nat on lo0 inet from 10.0.0.0/24 to any -> (lo0:network) round-robin",
 		func() *RuleBuilder {
 			return NAT().On("lo0").From("10.0.0.0/24").RedirectToInterface("lo0", DynamicFlagNetwork)
 		}},
@@ -131,7 +131,9 @@ func TestBuilderDefaultsLikePfctl(t *testing.T) {
 			require.NoError(t, err)
 			if len(lines) == len(rules) {
 				for i := range rules {
-					assert.Equal(t, normalize(lines[i]), normalize(rules[i].String()), "String of rule %d", i)
+					if want, got := normalize(lines[i]), normalize(rules[i].String()); want != got {
+						t.Errorf("String of rule %d:\n pfctl:   %s\n library: %s", i, want, got)
+					}
 				}
 			}
 		})

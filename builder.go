@@ -427,6 +427,13 @@ func (b *RuleBuilder) RedirectToInterface(name string, flags ...DynamicFlag) *Ru
 	for _, f := range flags {
 		all |= f
 	}
+	// (em0:network), :broadcast and :peer stand for several addresses, which
+	// the pool has to spread over; FreeBSD 15's pfctl sets round-robin for
+	// them, FreeBSD 14's leaves it out. The builder sets it unless a pool type
+	// is chosen.
+	if all&(DynamicFlagNetwork|DynamicFlagBroadcast|DynamicFlagPeer) != 0 && b.pool == PoolNone {
+		b.pool = PoolRoundRobin
+	}
 	return b.setRedirect(&builderRedirect{kind: addrInterface, text: name, flags: all})
 }
 
