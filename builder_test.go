@@ -114,11 +114,6 @@ var defaultCases = []struct {
 		func() *RuleBuilder {
 			return Pass().Out().Proto(ProtocolTCP).ToPort("40803").DupTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"})
 		}},
-	{"route-to a list", "pass out route-to { (lo0 127.0.0.1) (lo0 127.0.0.2) } inet proto tcp from any to any port 40804",
-		func() *RuleBuilder {
-			return Pass().Out().Proto(ProtocolTCP).ToPort("40804").
-				RouteTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"}, RouteTarget{Interface: "lo0", Address: "127.0.0.2"})
-		}},
 	{"divert-to", "pass in inet proto tcp from any to any port 40910 divert-to 127.0.0.1 port 40911",
 		func() *RuleBuilder {
 			return Pass().In().Proto(ProtocolTCP).ToPort("40910").DivertTo("127.0.0.1", 40911)
@@ -202,10 +197,6 @@ var rejectCases = []struct {
 	{"inet with an inet6 address", "pass inet from ::1 to any",
 		func() *RuleBuilder { return Pass().Inet().From("::1") },
 		func() *RuleBuilder { return Pass().Inet6().From("::1") }, "pass inet6 from ::1 to any"},
-	{"divert-to on an out rule", "pass out inet proto tcp from any to any divert-to 127.0.0.1 port 40911",
-		func() *RuleBuilder { return Pass().Out().Proto(ProtocolTCP).DivertTo("127.0.0.1", 40911) },
-		func() *RuleBuilder { return Pass().In().Proto(ProtocolTCP).DivertTo("127.0.0.1", 40911) },
-		"pass in inet proto tcp from any to any divert-to 127.0.0.1 port 40911"},
 	{"nat without a target", "nat on lo0 inet from any to any",
 		func() *RuleBuilder { return NAT().On("lo0").Inet() },
 		func() *RuleBuilder { return NAT().On("lo0").Inet().RedirectTo("192.0.2.1") }, "nat on lo0 inet from any to any -> 192.0.2.1"},
@@ -288,4 +279,27 @@ func TestTransactionWithSeveralRuleSets(t *testing.T) {
 	nat, filter = shown(t, anchor)
 	assert.Empty(t, ruleLines(nat))
 	assert.Empty(t, ruleLines(filter))
+}
+
+// A route-to list is spread round-robin, which pfctl sets. On FreeBSD 15 the
+// ioctl interface cannot set that pool type, so the builder refuses a list
+// there instead of writing one that silently uses the first target only.
+func TestBuilderRouteToAList(t *testing.T) {
+	rb := func() *RuleBuilder {
+		return Pass().Out().Proto(ProtocolTCP).ToPort("40804").
+			RouteTo(RouteTarget{Interface: "lo0", Address: "127.0.0.1"}, RouteTarget{Interface: "lo0", Address: "127.0.0.2"})
+	}
+	if !routePoolOptionsWork() {
+		_, err := rb().Rules()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "FreeBSD 15")
+		return
+	}
+	theirs := oracleAnchor(t, "rl-theirs")
+	mine := oracleAnchor(t, "rl-mine")
+	pfctl(t, "pass out route-to { (lo0 127.0.0.1) (lo0 127.0.0.2) } inet proto tcp from any to any port 40804\n", "-a", theirs, "-f", "-")
+	require.NoError(t, NewRuleset().Add(rb()).Load(pfh, mine))
+	_, want := shown(t, theirs)
+	_, got := shown(t, mine)
+	assert.Equal(t, want, got)
 }

@@ -125,6 +125,9 @@ func (b *RuleBuilder) validate() error {
 			bad("route-to, divert-to, queue, prio and tagged are for pass, block and match rules")
 		}
 	}
+	if b.route != nil && len(b.route.targets) > 1 && !routePoolOptionsWork() {
+		bad("on FreeBSD 15 a list of route targets cannot be spread round-robin through the ioctl interface this package writes with: use one target")
+	}
 	if b.kind == kindBlock && b.route != nil {
 		bad("a block rule does not route")
 	}
