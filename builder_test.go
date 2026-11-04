@@ -87,16 +87,16 @@ var defaultCases = []struct {
 		func() *RuleBuilder {
 			return NAT().On("lo0").From("10.0.0.0/24").RedirectTo("192.0.2.1").RedirectPort("40000:40100")
 		}},
-	{"nat table random", "nat on lo0 inet from 10.0.0.0/24 to any -> <pool> random",
-		func() *RuleBuilder { return NAT().On("lo0").From("10.0.0.0/24").RedirectToTable("pool").Random() }},
+	{"nat table round-robin", "nat on lo0 inet from 10.0.0.0/24 to any -> <pool> round-robin",
+		func() *RuleBuilder { return NAT().On("lo0").From("10.0.0.0/24").RedirectToTable("pool").RoundRobin() }},
 	{"nat interface network", "nat on lo0 inet from 10.0.0.0/24 to any -> (lo0:network) round-robin",
 		func() *RuleBuilder {
 			return NAT().On("lo0").From("10.0.0.0/24").RedirectToInterface("lo0", DynamicFlagNetwork)
 		}},
 	{"no nat", "no nat on lo0 inet from 10.1.0.0/24 to any", func() *RuleBuilder { return NoNAT().On("lo0").From("10.1.0.0/24") }},
-	{"rdr", "rdr on lo0 inet proto tcp from any to 192.0.2.1 port 8080 -> 10.0.0.5 port 80",
+	{"rdr", "rdr on lo0 inet proto tcp from any to 192.0.2.1 port 40081 -> 10.0.0.5 port 40082",
 		func() *RuleBuilder {
-			return RDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.1").ToPort("8080").RedirectTo("10.0.0.5", "80")
+			return RDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.1").ToPort("40081").RedirectTo("10.0.0.5", "40082")
 		}},
 	{"no rdr", "no rdr on lo0 inet proto tcp from any to 192.0.2.9 port 40004",
 		func() *RuleBuilder { return NoRDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.9").ToPort("40004") }},
@@ -226,7 +226,7 @@ func TestTransactionWithSeveralRuleSets(t *testing.T) {
 	err := NewRuleset().
 		Add(Scrub().In().On("lo0")).
 		Add(NAT().On("lo0").From("10.0.0.0/24").RedirectTo("192.0.2.1")).
-		Add(RDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.1").ToPort("8080").RedirectTo("10.0.0.5", "80")).
+		Add(RDR().On("lo0").Proto(ProtocolTCP).To("192.0.2.1").ToPort("40081").RedirectTo("10.0.0.5", "40082")).
 		Add(BINAT().On("lo0").From("10.0.0.9").RedirectTo("192.0.2.9")).
 		Add(Pass().In().On("lo0")).
 		Add(Block().Out()).
